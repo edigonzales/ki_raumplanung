@@ -12,7 +12,8 @@ public interface VectorDatabase {
      * Find relevant context snippets for the question.
      *
      * @param question the question that should be answered
-     * @return a list of context snippets
+     * @param limit    the maximum amount of snippets to return
+     * @return a list of context snippets enriched with metadata
      */
-    List<String> findRelevantContext(String question);
+    List<RetrievedContext> findRelevantContext(String question, int limit);
 }

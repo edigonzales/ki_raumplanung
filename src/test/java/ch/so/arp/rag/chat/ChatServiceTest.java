@@ -17,7 +17,11 @@ class ChatServiceTest {
             consumer.accept("token-1");
             consumer.accept("token-2");
         };
-        VectorDatabase vectorDatabase = question -> List.of("ctx-1", "ctx-2");
+        VectorDatabase vectorDatabase = (question, limit) -> List.of(
+                new RetrievedContext(1L, "doc-1", "Heading", "https://example.invalid/doc-1", "Seite 1", "ctx-1", 0.5d, 0.4d,
+                        0.3d, 0.2d),
+                new RetrievedContext(2L, "doc-2", "Heading", "https://example.invalid/doc-2", "Seite 2", "ctx-2", 0.1d, 0.2d,
+                        0.3d, 0.4d));
         Executor directExecutor = Runnable::run;
         ChatService chatService = new ChatService(llmClient, vectorDatabase, directExecutor);
 
@@ -50,7 +54,7 @@ class ChatServiceTest {
     @Test
     void propagatesErrorsFromVectorDatabase() {
         LlmClient llmClient = (question, context, consumer) -> consumer.accept("unused");
-        VectorDatabase failingDatabase = question -> {
+        VectorDatabase failingDatabase = (question, limit) -> {
             throw new IllegalStateException("boom");
         };
         Executor directExecutor = Runnable::run;

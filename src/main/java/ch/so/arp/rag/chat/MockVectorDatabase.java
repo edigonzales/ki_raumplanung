@@ -10,7 +10,8 @@ import java.util.List;
 class MockVectorDatabase implements VectorDatabase {
 
     @Override
-    public List<String> findRelevantContext(String question) {
-        return List.of("Mock context for: " + question);
+    public List<RetrievedContext> findRelevantContext(String question, int limit) {
+        return List.of(new RetrievedContext(0L, "mock-task", "Mock heading", "", "",
+                "Mock context for: " + question, 0.0d, 0.0d, 0.0d, 0.0d));
     }
 }
