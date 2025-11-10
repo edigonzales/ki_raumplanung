@@ -184,43 +184,83 @@ public class ingest_data {                         // <— Klassenname == Datein
         List<PageBlock> pageBlocks = splitByPages(pdf);
         for (PageBlock pb : pageBlocks) {
             List<String> chunks = chunkTextByTokens(pb.text, CHUNK_TOKENS, CHUNK_OVERLAP);
+
+            // --- NEW: batch embeddings per page ---
+            final int BATCH_SIZE = 128; // tune if needed
             int charCursor = 0;
-            for (String chunk : chunks) {
-                int start = charCursor, end = start + chunk.length();
-                charCursor = end;
+            for (int i = 0; i < chunks.size(); i += BATCH_SIZE) {
+                int to = Math.min(i + BATCH_SIZE, chunks.size());
+                List<String> batch = chunks.subList(i, to);
 
-                String digest = sha256(municipality + "|" + planType + "|" + pdf + "|" + pb.page + "|" + chunk);
-                float[] emb = NO_OPENAI ? dummyEmbed(chunk) : openaiEmbed(chunk);
+                // Prepare metadata for each chunk in this batch (start/end/digest etc.)
+                class MetaLocal {
+                    final String chunk;
+                    final int start;
+                    final int end;
+                    final String digest;
+                    final String[] topics;
+                    final String[] sobauCodes;
+                    MetaLocal(String chunk, int start, int end, String digest, String[] topics, String[] sobauCodes) {
+                        this.chunk = chunk; this.start = start; this.end = end; this.digest = digest;
+                        this.topics = topics; this.sobauCodes = sobauCodes;
+                    }
+                }
+                List<MetaLocal> metas = new ArrayList<>(batch.size());
+                for (String chunk : batch) {
+                    int start = charCursor, end = start + chunk.length();
+                    charCursor = end;
 
-                // lokale SOBAU-Codes im Chunk
-                Set<String> localSobau = new LinkedHashSet<>();
-                Matcher sm = SOBAU_PAT.matcher(chunk);
-                while (sm.find()) localSobau.add(sm.group(1));
-                //System.err.println("localSobau: " + localSobau);
-                Array sobauArray = conn.createArrayOf("text", localSobau.toArray(new String[0]));
+                    String digest = sha256(municipality + "|" + planType + "|" + pdf + "|" + pb.page + "|" + chunk);
 
-                try (PreparedStatement ps = conn.prepareStatement("""
-                        INSERT INTO arp_rag_vp.chunks
-                          (document_id, page_from, page_to, char_start, char_end, text, tsv,
-                           embedding, municipality, plan_type, topics, sobau_codes, digest)
-                        VALUES (?, ?, ?, ?, ?, ?, to_tsvector('german', public.unaccent(regexp_replace(lower(coalesce(?, '')), '\s+', ' ', 'g'))),
-                                ?::vector, ?, ?, ?, ?, ?)
-                        ON CONFLICT (digest) DO NOTHING
-                    """)) {
-                    ps.setObject(1, docId);
-                    ps.setInt(2, pb.page);
-                    ps.setInt(3, pb.page);
-                    ps.setInt(4, start);
-                    ps.setInt(5, end);
-                    ps.setString(6, chunk);
-                    ps.setString(7, chunk);
-                    ps.setString(8, toPgVector(emb));
-                    ps.setString(9, municipality);
-                    ps.setString(10, planType);
-                    ps.setArray(11, conn.createArrayOf("text", inferTopics(chunk)));
-                    ps.setArray(12, sobauArray);
-                    ps.setString(13, digest);
-                    ps.executeUpdate();
+                    // lokale SOBAU-Codes im Chunk (store raw; convert to SQL array at insert)
+                    Set<String> localSobau = new LinkedHashSet<>();
+                    Matcher sm = SOBAU_PAT.matcher(chunk);
+                    while (sm.find()) localSobau.add(sm.group(1));
+
+                    metas.add(new MetaLocal(
+                            chunk,
+                            start,
+                            end,
+                            digest,
+                            inferTopics(chunk),
+                            localSobau.toArray(new String[0])
+                    ));
+                }
+
+                // Fetch embeddings for this batch in one HTTP request (or dummy)
+                List<float[]> vectors = NO_OPENAI
+                        ? metas.stream().map(m -> dummyEmbed(m.chunk)).toList()
+                        : openaiEmbedBatch(metas.stream().map(m -> m.chunk).toList());
+
+                // Insert each chunk (unchanged logic per row)
+                for (int j = 0; j < metas.size(); j++) {
+                    MetaLocal m = metas.get(j);
+                    float[] emb = vectors.get(j);
+                    Array sobauArray = conn.createArrayOf("text", m.sobauCodes);
+
+                    try (PreparedStatement ps = conn.prepareStatement("""
+                            INSERT INTO arp_rag_vp.chunks
+                              (document_id, page_from, page_to, char_start, char_end, text, tsv,
+                               embedding, municipality, plan_type, topics, sobau_codes, digest)
+                            VALUES (?, ?, ?, ?, ?, ?, to_tsvector('german', public.unaccent(regexp_replace(lower(coalesce(?, '')), '\s+', ' ', 'g'))),
+                                    ?::vector, ?, ?, ?, ?, ?)
+                            ON CONFLICT (digest) DO NOTHING
+                        """)) {
+                        ps.setObject(1, docId);
+                        ps.setInt(2, pb.page);
+                        ps.setInt(3, pb.page);
+                        ps.setInt(4, m.start);
+                        ps.setInt(5, m.end);
+                        ps.setString(6, m.chunk);
+                        ps.setString(7, m.chunk);
+                        ps.setString(8, toPgVector(emb));
+                        ps.setString(9, municipality);
+                        ps.setString(10, planType);
+                        ps.setArray(11, conn.createArrayOf("text", m.topics));
+                        ps.setArray(12, sobauArray);
+                        ps.setString(13, m.digest);
+                        ps.executeUpdate();
+                    }
                 }
             }
         }
@@ -372,8 +412,8 @@ public class ingest_data {                         // <— Klassenname == Datein
 
     // --- Embeddings ---
 
+    // (kept; not used now, but left unchanged)
     static float[] openaiEmbed(String text) throws IOException, InterruptedException {
-        // Direkter REST-Call zur OpenAI Embeddings API (stabil laut API-Referenz)
         String apiKey = System.getenv("OPENAI_API_KEY");
         String body = """
         {"model":"%s","input":%s}
@@ -387,12 +427,11 @@ public class ingest_data {                         // <— Klassenname == Datein
                 .build();
 
         HttpResponse<InputStream> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofInputStream());
+
         if (resp.statusCode() >= 300) {
             String err = new String(resp.body().readAllBytes(), StandardCharsets.UTF_8);
             throw new IOException("OpenAI Embeddings HTTP " + resp.statusCode() + ": " + err);
         }
-        // kleine, einfache JSON-Parsing-Routine ohne extra Dependency
-        // wir suchen das erste "embedding":[ ... ] und lesen die Floats heraus
         String json = new String(resp.body().readAllBytes(), StandardCharsets.UTF_8);
         int idx = json.indexOf("\"embedding\"");
         if (idx < 0) throw new IOException("Kein 'embedding' Feld in Antwort");
@@ -405,6 +444,63 @@ public class ingest_data {                         // <— Klassenname == Datein
         return v;
     }
 
+    // NEW: batched embeddings request (array input -> array output)
+    static List<float[]> openaiEmbedBatch(List<String> inputs) throws IOException, InterruptedException {
+        String apiKey = System.getenv("OPENAI_API_KEY");
+    
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"model\":\"").append(OPENAI_EMBEDDING_MODEL).append("\",\"input\":[");
+        for (int i = 0; i < inputs.size(); i++) {
+            if (i > 0) sb.append(',');
+            sb.append(jsonEscape(inputs.get(i)));
+        }
+        sb.append("]}");
+    
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.openai.com/v1/embeddings"))
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", "application/json")
+                // .header("Accept-Encoding", "gzip")  // <-- remove this
+                .POST(HttpRequest.BodyPublishers.ofString(sb.toString()))
+                .build();
+    
+        // Read decoded text directly (lets HttpClient handle gzip/deflate)
+        HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+    
+        if (resp.statusCode() >= 300) {
+            throw new IOException("OpenAI Embeddings HTTP " + resp.statusCode() + ": " + resp.body());
+        }
+    
+        String json = resp.body();
+    
+        // Extract each "embedding":[ ... ] with simple scanning (same approach as before)
+        List<float[]> out = new ArrayList<>(inputs.size());
+        int from = 0;
+        while (true) {
+            int k = json.indexOf("\"embedding\"", from);
+            if (k < 0) break;
+            int a = json.indexOf('[', k);
+            if (a < 0) break;
+            int b = json.indexOf(']', a);
+            if (b < 0) break;
+            String arr = json.substring(a + 1, b);
+            String[] parts = arr.split(",");
+            float[] v = new float[parts.length];
+            for (int i = 0; i < parts.length; i++) v[i] = Float.parseFloat(parts[i].trim());
+            out.add(v);
+            from = b + 1;
+        }
+    
+        if (out.size() != inputs.size()) {
+            // Optional: small hint to debug if it ever happens again
+            System.err.println("DEBUG openaiEmbedBatch: inputs=" + inputs.size() + " embeddings=" + out.size());
+            // You can also print a short slice of json if needed
+            throw new IOException("Embedding count mismatch");
+        }
+    
+        return out;
+    }    
+    
     static String jsonEscape(String s){
         String esc = s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n","\\n").replace("\r","\\r");
         return "\"" + esc + "\"";
