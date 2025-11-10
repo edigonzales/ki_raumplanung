@@ -32,13 +32,14 @@ class ChatConfigurationTest {
                 .withPropertyValues(
                         "rag.chat.mock-openai=false",
                         "rag.chat.mock-vector-store=false",
-                        "rag.chat.openai.api-key=test-key",
+                        "spring.ai.openai.api-key=test-key",
                         "rag.chat.openai.base-url=https://example.com/v1",
                         "rag.chat.openai.model=gpt-4o")
                 .run(context -> {
                     assertThat(context).hasSingleBean(LlmClient.class);
                     assertThat(context).getBean(LlmClient.class).isInstanceOf(OpenAiLlmClient.class);
                     OpenAiClientProperties properties = context.getBean(OpenAiClientProperties.class);
+                    assertThat(properties.getApiKey()).isEqualTo("test-key");
                     assertThat(properties.getModel()).isEqualTo("gpt-4o");
 
                     assertThat(context).hasSingleBean(VectorDatabase.class);

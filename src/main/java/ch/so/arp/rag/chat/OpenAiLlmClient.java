@@ -23,7 +23,8 @@ class OpenAiLlmClient implements LlmClient {
 
     OpenAiLlmClient(OpenAiClientProperties properties) {
         if (!StringUtils.hasText(properties.getApiKey())) {
-            throw new IllegalArgumentException("Property 'rag.chat.openai.api-key' must be provided when mocks are disabled");
+            throw new IllegalArgumentException(
+                    "Property 'spring.ai.openai.api-key' must be provided when mocks are disabled");
         }
         this.properties = properties;
     }
