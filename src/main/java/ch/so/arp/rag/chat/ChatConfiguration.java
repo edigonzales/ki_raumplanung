@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
  * Central configuration wiring the chat components together. It exposes toggles
@@ -49,8 +49,21 @@ public class ChatConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean
+    public EmbeddingProvider embeddingProvider() {
+        return new DeterministicEmbeddingProvider(3072);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public CrossEncoderReranker crossEncoderReranker() {
+        return new TokenOverlapCrossEncoderReranker();
+    }
+
+    @Bean
     @ConditionalOnProperty(name = "rag.chat.mock-vector-store", havingValue = "false")
-    public VectorDatabase postgresVectorDatabase(NamedParameterJdbcTemplate jdbcTemplate) {
-        return new PostgresVectorDatabase(jdbcTemplate);
+    public VectorDatabase postgresVectorDatabase(JdbcClient jdbcClient, EmbeddingProvider embeddingProvider,
+            CrossEncoderReranker reranker) {
+        return new PostgresVectorDatabase(jdbcClient, embeddingProvider, reranker);
     }
 }
