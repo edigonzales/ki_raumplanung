@@ -47,6 +47,19 @@ public class ingest_data {                         // <— Klassenname == Datein
         "VP_(OP|GP)_([\\p{L}\\p{M}'\\-\\s]+?)(?:_|\\.)",
         Pattern.UNICODE_CHARACTER_CLASS
     );
+    static final Pattern OP_SECTION_HEADING_PATTERN = Pattern.compile(
+            "^\\s*(\\d+(?:\\.\\d+)*)\\s+(.+)$",
+            Pattern.UNICODE_CHARACTER_CLASS
+    );
+    static final Pattern GP_SECTION_HEADING_PATTERN = Pattern.compile(
+            "^(Ausgangslage|Beurteilung|Raumplanung(?:\\s+und\\s+Richtprojekt)?|" +
+            "Baumasse(?:\\s*/\\s*Grenzabstände)?|Grenzabstände|Lärm|" +
+            "Erschliessung(?:sprinzip)?|Umgebungsgestaltung|" +
+            "Gewässer\\s*/\\s*Ufergestaltung|Wasserbauliche\\s+Massnahmen\\s+an\\s+öffentlichen\\s+Gewässern|" +
+            "Geschossfläche|Sonderbauvorschriften|Anmerkungen\\s+zu\\s+den\\s+Unterlagen|" +
+            "Verkehr|Umwelt|Wald|Flora|Fauna|Lebensräume|Wasserversorgung|Planungsmehrwert)\\b[^\\n]*$",
+            Pattern.MULTILINE | Pattern.UNICODE_CHARACTER_CLASS | Pattern.CASE_INSENSITIVE
+    );
 
     // Tokenizer
     static final EncodingRegistry REGISTRY = Encodings.newDefaultEncodingRegistry();
@@ -55,6 +68,7 @@ public class ingest_data {                         // <— Klassenname == Datein
     // CLI Flags
     static boolean NO_OPENAI = false;
     static boolean RESET_ONLY = false;
+    static boolean RUN_DRY = false;
 
     // minimaler HTTP-Client für Embeddings
     static final HttpClient HTTP = HttpClient.newHttpClient();
@@ -66,8 +80,13 @@ public class ingest_data {                         // <— Klassenname == Datein
                 case "--help", "-h" -> { printHelp(); return; }
                 case "--no-openai" -> NO_OPENAI = true;
                 case "--reset" -> RESET_ONLY = true;
+                case "--run-dry" -> RUN_DRY = true;
                 default -> inputs.add(a);
             }
+        }
+
+        if (RUN_DRY) {
+            NO_OPENAI = true;
         }
 
         if (!NO_OPENAI && System.getenv("OPENAI_API_KEY") == null) {
@@ -75,10 +94,19 @@ public class ingest_data {                         // <— Klassenname == Datein
             System.exit(1);
         }
 
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PWD)) {
-            conn.setAutoCommit(false);
+        if (RUN_DRY && RESET_ONLY) {
+            System.err.println("--run-dry und --reset können nicht gemeinsam verwendet werden. Entferne eine der Optionen.");
+            return;
+        }
 
-            if (RESET_ONLY) {
+        Connection conn = null;
+        try {
+            if (!RUN_DRY) {
+                conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PWD);
+                conn.setAutoCommit(false);
+            }
+
+            if (RESET_ONLY && conn != null) {
                 resetDatabase(conn);
                 conn.commit();
                 if (inputs.isEmpty()) {
@@ -97,9 +125,10 @@ public class ingest_data {                         // <— Klassenname == Datein
             for (String arg : inputs) {
                 Path p = Paths.get(arg);
                 if (Files.isDirectory(p)) {
+                    final Connection connection = conn;
                     try (Stream<Path> s = Files.walk(p)) {
                         s.filter(f -> f.toString().toLowerCase().endsWith(".pdf")).forEach(pdf -> {
-                            try { ingestPdf(conn, pdf); } catch (Exception e) { logErr(pdf, e); }
+                            try { ingestPdf(connection, pdf); } catch (Exception e) { logErr(pdf, e); }
                         });
                     }
                 } else if (Files.isRegularFile(p) && p.toString().toLowerCase().endsWith(".pdf")) {
@@ -108,8 +137,14 @@ public class ingest_data {                         // <— Klassenname == Datein
                     System.err.println("Übersprungen (kein PDF): " + p);
                 }
             }
-            conn.commit();
-            System.out.println("Ingest abgeschlossen.");
+            if (conn != null) {
+                conn.commit();
+            }
+            System.out.println(RUN_DRY ? "Run-Dry abgeschlossen." : "Ingest abgeschlossen.");
+        } finally {
+            if (conn != null) {
+                conn.close();
+            }
         }
     }
 
@@ -120,6 +155,7 @@ public class ingest_data {                         // <— Klassenname == Datein
         Optionen:
           --no-openai   : Dummy-Embeddings (deterministisch). Kein OPENAI_API_KEY nötig.
           --reset       : Leert Schema arp_rag_vp (TRUNCATE … CASCADE). Mit Pfaden: danach ingest.
+          --run-dry     : Kein DB-Import, keine Embeddings. Zeigt erkannte Sektionen & Chunks.
           -h, --help    : Hilfe anzeigen.
         """);
     }
@@ -154,44 +190,90 @@ public class ingest_data {                         // <— Klassenname == Datein
         String planType = meta.planType;
         String municipality = meta.municipality;
 
+
         UUID docId = UUID.randomUUID();
-        try (PreparedStatement ps = conn.prepareStatement("""
-                INSERT INTO arp_rag_vp.documents (id, filename, title, plan_type, municipality, pages, source_url)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """)) {
-            ps.setObject(1, docId);
-            ps.setString(2, pdf.getFileName().toString());
-            ps.setString(3, stripPdfTitleGuess(text));
-            ps.setString(4, planType);
-            ps.setString(5, municipality);
-            ps.setInt(6, pages);
-            ps.setString(7, pdf.toAbsolutePath().toString());
-            ps.executeUpdate();
+        if (conn != null) {
+            try (PreparedStatement ps = conn.prepareStatement("""
+                    INSERT INTO arp_rag_vp.documents (id, filename, title, plan_type, municipality, pages, source_url)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """)) {
+                ps.setObject(1, docId);
+                ps.setString(2, pdf.getFileName().toString());
+                ps.setString(3, stripPdfTitleGuess(text));
+                ps.setString(4, planType);
+                ps.setString(5, municipality);
+                ps.setInt(6, pages);
+                ps.setString(7, pdf.toAbsolutePath().toString());
+                ps.executeUpdate();
+            }
+        } else if (RUN_DRY) {
+            System.out.println("Dokument: " + pdf.getFileName() + " (" + planType + ", " + municipality + ", " + pages + " Seiten)");
         }
 
         // globale SOBAU-Erfassung (optional Seite unbekannt)
         Matcher mm = SOBAU_PAT.matcher(text);
         while (mm.find()) {
-            String numberLike = mm.group(1);                      
-            String digitsOnly  = numberLike.replaceAll("['\\u2019]", ""); // Apostroph/’ entfernen
-            int value = Integer.parseInt(digitsOnly);  
-            System.err.println("SOBAU: " + value);       
-            insertSobau(conn, docId, String.valueOf(value), String.valueOf(value), null);
+            String numberLike = mm.group(1);
+            String digitsOnly  = numberLike.replaceAll("['\u2019]", ""); // Apostroph/’ entfernen
+            int value = Integer.parseInt(digitsOnly);
+            if (conn != null) {
+                insertSobau(conn, docId, String.valueOf(value), String.valueOf(value), null);
+            } else {
+                System.out.println("  SOBAU gefunden: " + value);
+            }
         }
 
-        // Seitenweise chunking
+        // Abschnittsweise Chunking
         List<PageBlock> pageBlocks = splitByPages(pdf);
-        for (PageBlock pb : pageBlocks) {
-            List<String> chunks = chunkTextByTokens(pb.text, CHUNK_TOKENS, CHUNK_OVERLAP);
+        List<SectionBlock> sections = splitIntoSections(pageBlocks, planType, pdf.getFileName().toString());
+        if (RUN_DRY) {
+            System.out.println("Erkannte Sektionen: " + sections.size());
+        }
 
-            // --- NEW: batch embeddings per page ---
-            final int BATCH_SIZE = 128; // tune if needed
+        int sectionIndex = 0;
+        for (SectionBlock section : sections) {
+            sectionIndex++;
+            Long sectionId = null;
+            if (conn != null) {
+                try (PreparedStatement ps = conn.prepareStatement("""
+                        INSERT INTO arp_rag_vp.sections (document_id, section_path, page_from, page_to)
+                        VALUES (?, ?, ?, ?)
+                    """, Statement.RETURN_GENERATED_KEYS)) {
+                    ps.setObject(1, docId);
+                    if (section.heading == null || section.heading.isBlank()) {
+                        ps.setNull(2, Types.VARCHAR);
+                    } else {
+                        ps.setString(2, section.heading);
+                    }
+                    ps.setInt(3, section.pageFrom);
+                    ps.setInt(4, section.pageTo);
+                    ps.executeUpdate();
+                    try (ResultSet rs = ps.getGeneratedKeys()) {
+                        if (rs.next()) {
+                            sectionId = rs.getLong(1);
+                        }
+                    }
+                }
+            } else if (RUN_DRY) {
+                String heading = section.heading == null || section.heading.isBlank()
+                        ? "[ohne Überschrift]"
+                        : section.heading;
+                System.out.println("== Abschnitt " + sectionIndex + ": " + heading +
+                        " (Seiten " + section.pageFrom + "-" + section.pageTo + ")");
+            }
+
+            List<String> chunks = chunkTextByTokens(section.text, CHUNK_TOKENS, CHUNK_OVERLAP);
+            if (chunks.isEmpty()) {
+                continue;
+            }
+
+            final int BATCH_SIZE = 128;
             int charCursor = 0;
+            int chunkCounter = 0;
             for (int i = 0; i < chunks.size(); i += BATCH_SIZE) {
                 int to = Math.min(i + BATCH_SIZE, chunks.size());
                 List<String> batch = chunks.subList(i, to);
 
-                // Prepare metadata for each chunk in this batch (start/end/digest etc.)
                 class MetaLocal {
                     final String chunk;
                     final int start;
@@ -200,21 +282,31 @@ public class ingest_data {                         // <— Klassenname == Datein
                     final String[] topics;
                     final String[] sobauCodes;
                     MetaLocal(String chunk, int start, int end, String digest, String[] topics, String[] sobauCodes) {
-                        this.chunk = chunk; this.start = start; this.end = end; this.digest = digest;
-                        this.topics = topics; this.sobauCodes = sobauCodes;
+                        this.chunk = chunk;
+                        this.start = start;
+                        this.end = end;
+                        this.digest = digest;
+                        this.topics = topics;
+                        this.sobauCodes = sobauCodes;
                     }
                 }
+
                 List<MetaLocal> metas = new ArrayList<>(batch.size());
                 for (String chunk : batch) {
-                    int start = charCursor, end = start + chunk.length();
+                    int start = charCursor;
+                    int end = start + chunk.length();
                     charCursor = end;
 
-                    String digest = sha256(municipality + "|" + planType + "|" + pdf + "|" + pb.page + "|" + chunk);
+                    String digest = sha256(
+                            municipality + "|" + planType + "|" + pdf + "|" + section.pageFrom + "-" + section.pageTo + "|" +
+                            (section.heading == null ? "" : section.heading) + "|" + chunk
+                    );
 
-                    // lokale SOBAU-Codes im Chunk (store raw; convert to SQL array at insert)
                     Set<String> localSobau = new LinkedHashSet<>();
                     Matcher sm = SOBAU_PAT.matcher(chunk);
-                    while (sm.find()) localSobau.add(sm.group(1));
+                    while (sm.find()) {
+                        localSobau.add(sm.group(1));
+                    }
 
                     metas.add(new MetaLocal(
                             chunk,
@@ -226,44 +318,63 @@ public class ingest_data {                         // <— Klassenname == Datein
                     ));
                 }
 
-                // Fetch embeddings for this batch in one HTTP request (or dummy)
+                if (RUN_DRY) {
+                    for (MetaLocal m : metas) {
+                        chunkCounter++;
+                        System.out.printf("  Chunk %d.%d (Tokens=%d, Zeichen=%d)%n",
+                                sectionIndex, chunkCounter, ENCODING.countTokens(m.chunk), m.chunk.length());
+                        System.out.println(m.chunk);
+                        System.out.println("  ----");
+                    }
+                    continue;
+                }
+
                 List<float[]> vectors = NO_OPENAI
                         ? metas.stream().map(m -> dummyEmbed(m.chunk)).toList()
                         : openaiEmbedBatch(metas.stream().map(m -> m.chunk).toList());
 
-                // Insert each chunk (unchanged logic per row)
                 for (int j = 0; j < metas.size(); j++) {
                     MetaLocal m = metas.get(j);
                     float[] emb = vectors.get(j);
                     Array sobauArray = conn.createArrayOf("text", m.sobauCodes);
-
+                    Array topicArray = conn.createArrayOf("text", m.topics);
                     try (PreparedStatement ps = conn.prepareStatement("""
                             INSERT INTO arp_rag_vp.chunks
-                              (document_id, page_from, page_to, char_start, char_end, text, tsv,
+                              (document_id, section_id, page_from, page_to, char_start, char_end, text, tsv,
                                embedding, municipality, plan_type, topics, sobau_codes, digest)
-                            VALUES (?, ?, ?, ?, ?, ?, to_tsvector('german', public.unaccent(regexp_replace(lower(coalesce(?, '')), '\s+', ' ', 'g'))),
+                            VALUES (?, ?, ?, ?, ?, ?, ?, to_tsvector('german', public.unaccent(regexp_replace(lower(coalesce(?, '')
+), '\s+', ' ', 'g'))),
                                     ?::vector, ?, ?, ?, ?, ?)
                             ON CONFLICT (digest) DO NOTHING
                         """)) {
                         ps.setObject(1, docId);
-                        ps.setInt(2, pb.page);
-                        ps.setInt(3, pb.page);
-                        ps.setInt(4, m.start);
-                        ps.setInt(5, m.end);
-                        ps.setString(6, m.chunk);
+                        if (sectionId == null) {
+                            ps.setNull(2, Types.BIGINT);
+                        } else {
+                            ps.setLong(2, sectionId);
+                        }
+                        ps.setInt(3, section.pageFrom);
+                        ps.setInt(4, section.pageTo);
+                        ps.setInt(5, m.start);
+                        ps.setInt(6, m.end);
                         ps.setString(7, m.chunk);
-                        ps.setString(8, toPgVector(emb));
-                        ps.setString(9, municipality);
-                        ps.setString(10, planType);
-                        ps.setArray(11, conn.createArrayOf("text", m.topics));
-                        ps.setArray(12, sobauArray);
-                        ps.setString(13, m.digest);
+                        ps.setString(8, m.chunk);
+                        ps.setString(9, toPgVector(emb));
+                        ps.setString(10, municipality);
+                        ps.setString(11, planType);
+                        ps.setArray(12, topicArray);
+                        ps.setArray(13, sobauArray);
+                        ps.setString(14, m.digest);
                         ps.executeUpdate();
                     }
+                    sobauArray.free();
+                    topicArray.free();
                 }
             }
         }
-        conn.commit();
+        if (conn != null) {
+            conn.commit();
+        }
     }
 
     // --- Helpers ---
@@ -272,15 +383,12 @@ public class ingest_data {                         // <— Klassenname == Datein
         Matcher m = FILENAME_PAT.matcher(filename);
         String plan = null, muni = null;
         if (m.find()) {
-            System.err.println(m.toString());
-            System.err.println(m.group(1));
             plan = switch (m.group(1).toUpperCase()) {
                 case "OP" -> "ortsplanung";
                 case "GP" -> "gestaltungsplan";
                 default -> null;
             };
             muni = m.group(2).replace('_',' ').trim();
-            System.err.println(muni);
         }
         if (plan == null) plan = "ortsplanung";
         if (muni == null) muni = "Unbekannt";
@@ -314,6 +422,18 @@ public class ingest_data {                         // <— Klassenname == Datein
     }
 
     static class PageBlock { final int page; final String text; PageBlock(int p, String t){page=p;text=t;} }
+    static class SectionBlock {
+        final int pageFrom;
+        final int pageTo;
+        final String heading;
+        final String text;
+        SectionBlock(int pageFrom, int pageTo, String heading, String text) {
+            this.pageFrom = pageFrom;
+            this.pageTo = pageTo;
+            this.heading = heading;
+            this.text = text;
+        }
+    }
     static List<PageBlock> splitByPages(Path pdf) throws IOException {
         List<PageBlock> out = new ArrayList<>();
         try (PDDocument doc = Loader.loadPDF(Files.readAllBytes(pdf))) {  // <— Loader.loadPDF
@@ -329,6 +449,108 @@ public class ingest_data {                         // <— Klassenname == Datein
             }
         }
         return out;
+    }
+
+    static List<SectionBlock> splitIntoSections(List<PageBlock> pages, String planType, String filename) {
+        List<SectionBlock> sections = new ArrayList<>();
+        if (pages.isEmpty()) {
+            return sections;
+        }
+
+        String upperName = filename.toUpperCase(Locale.ROOT);
+        boolean isOpDoc = upperName.contains("_OP_");
+        boolean isGpDoc = upperName.contains("_GP_");
+        if (!isOpDoc && !isGpDoc) {
+            isOpDoc = "ortsplanung".equalsIgnoreCase(planType);
+            isGpDoc = "gestaltungsplan".equalsIgnoreCase(planType);
+        }
+
+        boolean useNumberedHeadings = isOpDoc && !isGpDoc;
+
+        StringBuilder current = new StringBuilder();
+        String currentHeading = null;
+        int sectionStartPage = pages.get(0).page;
+        int lastPage = sectionStartPage;
+
+        for (PageBlock pb : pages) {
+            String[] lines = pb.text.split("\\R", -1);
+            for (String raw : lines) {
+                String normalized = raw.replace('\u00A0', ' ').strip();
+                boolean heading;
+                if (useNumberedHeadings) {
+                    heading = isOpHeadingLine(normalized);
+                } else if (isGpDoc) {
+                    heading = isGpHeadingLine(normalized);
+                } else {
+                    heading = isOpHeadingLine(normalized) || isGpHeadingLine(normalized);
+                }
+
+                if (heading) {
+                    if (current.length() > 0) {
+                        String sectionText = current.toString().strip();
+                        if (!sectionText.isEmpty() || currentHeading != null) {
+                            sections.add(new SectionBlock(sectionStartPage, lastPage, currentHeading, sectionText));
+                        }
+                        current.setLength(0);
+                    }
+                    currentHeading = normalized;
+                    sectionStartPage = pb.page;
+                    lastPage = pb.page;
+                    current.append(normalized).append("\n\n");
+                } else {
+                    lastPage = pb.page;
+                    if (!normalized.isEmpty()) {
+                        current.append(normalized).append("\n");
+                    } else {
+                        current.append("\n");
+                    }
+                }
+            }
+        }
+
+        if (current.length() > 0) {
+            String sectionText = current.toString().strip();
+            if (!sectionText.isEmpty() || currentHeading != null) {
+                sections.add(new SectionBlock(sectionStartPage, lastPage, currentHeading, sectionText));
+            }
+        }
+
+        if (sections.isEmpty()) {
+            StringBuilder merged = new StringBuilder();
+            int firstPage = pages.get(0).page;
+            int endPage = firstPage;
+            for (PageBlock pb : pages) {
+                if (!pb.text.isBlank()) {
+                    endPage = pb.page;
+                }
+                merged.append(pb.text.strip()).append("\n\n");
+            }
+            sections.add(new SectionBlock(firstPage, endPage, null, merged.toString().strip()));
+        }
+
+        return sections;
+    }
+
+    static boolean isOpHeadingLine(String line) {
+        if (line == null) return false;
+        String trimmed = line.trim();
+        if (trimmed.isEmpty() || trimmed.length() > 200) return false;
+        Matcher m = OP_SECTION_HEADING_PATTERN.matcher(trimmed);
+        if (!m.matches()) return false;
+        String title = m.group(2).trim();
+        if (title.isEmpty() || title.length() > 160) return false;
+        return containsLetter(title);
+    }
+
+    static boolean isGpHeadingLine(String line) {
+        if (line == null) return false;
+        String trimmed = line.trim();
+        if (trimmed.isEmpty()) return false;
+        return GP_SECTION_HEADING_PATTERN.matcher(trimmed).matches();
+    }
+
+    static boolean containsLetter(String text) {
+        return text.codePoints().anyMatch(Character::isLetter);
     }
 
     static List<String> chunkTextByTokens(String text, int chunkTokens, int overlapTokens) {
