@@ -30,7 +30,7 @@ sequenceDiagram
 
     Client->>ChatController: POST /api/chat (question)
     ChatController->>ChatService: streamAnswer(question, handler)
-    ChatService->>VectorDatabase: findRelevantContext(question)
+    ChatService->>VectorDatabase: findRelevantContext(question, limit)
     VectorDatabase-->>ChatService: context snippets
     ChatService->>LlmClient: streamChat(question, context, callback)
     LlmClient-->>ChatService: tokens
@@ -48,6 +48,14 @@ sequenceDiagram
 - **`LlmClient`**, implemented by `MockLlmClient` and `OpenAiLlmClient`, streams model responses either from a deterministic mock or from the real OpenAI API depending on configuration.【F:src/main/java/ch/so/arp/rag/chat/LlmClient.java†L6-L18】【F:src/main/java/ch/so/arp/rag/chat/MockLlmClient.java†L7-L32】【F:src/main/java/ch/so/arp/rag/chat/OpenAiLlmClient.java†L13-L64】
 - **`SseEmitterFactory`** and its default implementation encapsulate emitter creation so controller tests can inject fakes.【F:src/main/java/ch/so/arp/rag/chat/SseEmitterFactory.java†L5-L17】【F:src/main/java/ch/so/arp/rag/chat/DefaultSseEmitterFactory.java†L5-L21】
 - **`ChatConfiguration`** wires the components together and toggles between real and mock infrastructure via Spring Boot properties, including provisioning the executor used by the service.【F:src/main/java/ch/so/arp/rag/chat/ChatConfiguration.java†L19-L49】
+
+### Retrieval pipeline
+
+When the `PostgresVectorDatabase` is active the hybrid retrieval pipeline executes three phases before handing the best matches to the LLM:
+
+1. **Database search** – run the tuned lexical SQL query that emphasises German term OR-combinations alongside a semantic pgvector similarity search to gather rich candidates for the user question.【F:src/main/java/ch/so/arp/rag/chat/PostgresVectorDatabase.java†L28-L87】【F:src/main/java/ch/so/arp/rag/chat/PostgresVectorDatabase.java†L107-L121】
+2. **Reciprocal Rank Fusion (RRF)** – merge lexical and semantic result lists while rewarding items that rank highly in either list so that nuanced semantic matches can surface even if they are lexically sparse.【F:src/main/java/ch/so/arp/rag/chat/PostgresVectorDatabase.java†L123-L152】
+3. **Cross-encoder reranking** – rescore the fused candidates using the configured cross encoder and emit the highest scoring contexts to the chat service. The cross encoder jointly inspects the question and each candidate passage so it can reward nuanced semantic alignments and penalise false positives that slipped through the coarse vector search, improving precision for the final snippets we hand to the LLM.【F:src/main/java/ch/so/arp/rag/chat/PostgresVectorDatabase.java†L110-L121】【F:src/main/java/ch/so/arp/rag/chat/PostgresVectorDatabase.java†L154-L195】
 
 ### Why an executor is used
 

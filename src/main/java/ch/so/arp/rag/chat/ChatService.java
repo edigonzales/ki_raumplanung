@@ -17,6 +17,8 @@ public class ChatService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatService.class);
 
+    private static final int DEFAULT_CONTEXT_LIMIT = 8;
+
     private final LlmClient llmClient;
     private final VectorDatabase vectorDatabase;
     private final Executor chatExecutor;
@@ -31,7 +33,9 @@ public class ChatService {
         Objects.requireNonNull(handler, "handler");
         chatExecutor.execute(() -> {
             try {
-                List<String> context = vectorDatabase.findRelevantContext(question);
+                List<RetrievedContext> retrievedContexts = vectorDatabase.findRelevantContext(question,
+                        DEFAULT_CONTEXT_LIMIT);
+                List<String> context = retrievedContexts.stream().map(RetrievedContext::formatForPrompt).toList();
                 llmClient.streamChat(question, context, handler::onToken);
                 handler.onComplete();
             } catch (Exception ex) {
