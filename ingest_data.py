@@ -29,8 +29,9 @@ CHUNK_OVERLAP = 90
 
 SOBAU_REGEX = r"(?:SOBAU|Dossier)\s*(?:Nr\.\s*)?#\s*(\d{2,3}['\u2019\s]?\d{3})"
 SOBAU_PAT = re.compile(SOBAU_REGEX)
+# Use a Unicode-friendly character class without the unsupported \p escapes.
 FILENAME_PAT = re.compile(
-    r"VP_(OP|GP)_([\w\p{L}\p{M}'\-\s]+?)(?:_|\.)",
+    r"VP_(OP|GP)_([\wÀ-ÖØ-öø-ÿ'\-\s]+?)(?:_|\.)",
     re.UNICODE,
 )
 
