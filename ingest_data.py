@@ -260,6 +260,7 @@ def ingest_pdf(conn, pdf_path: Path, run_dry: bool, no_openai: bool) -> None:
     meta = parse_filename(pdf_path.name)
 
     document_id = uuid.uuid4()
+    document_id_str = str(document_id)
 
     if conn:
         with conn.cursor() as cur:
@@ -269,7 +270,7 @@ def ingest_pdf(conn, pdf_path: Path, run_dry: bool, no_openai: bool) -> None:
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
-                    document_id,
+                    document_id_str,
                     pdf_path.name,
                     guess_title(markdown),
                     meta.plan_type,
@@ -286,7 +287,7 @@ def ingest_pdf(conn, pdf_path: Path, run_dry: bool, no_openai: bool) -> None:
         digits_only = re.sub(r"['\u2019]", "", number_like)
         sobau_code = str(int(digits_only))
         if conn:
-            insert_sobau(conn, document_id, sobau_code, number_like, None)
+            insert_sobau(conn, document_id_str, sobau_code, number_like, None)
         else:
             print(f"  SOBAU gefunden: {sobau_code}")
 
@@ -304,7 +305,7 @@ def ingest_pdf(conn, pdf_path: Path, run_dry: bool, no_openai: bool) -> None:
                     VALUES (%s, %s, %s, %s)
                     RETURNING id
                     """,
-                    (document_id, section.heading, section.page_from, section.page_to),
+                    (document_id_str, section.heading, section.page_from, section.page_to),
                 )
                 res = cur.fetchone()
                 section_id = res[0] if res else None
@@ -365,7 +366,7 @@ def ingest_pdf(conn, pdf_path: Path, run_dry: bool, no_openai: bool) -> None:
                     ON CONFLICT (digest) DO NOTHING
                     """,
                     (
-                        document_id,
+                        document_id_str,
                         section_id,
                         section.page_from,
                         section.page_to,
