@@ -339,8 +339,9 @@ def ingest_pdf(conn, pdf_path: Path, run_dry: bool, no_openai: bool) -> None:
 
         if run_dry:
             for c_idx, meta_local in enumerate(metas, start=1):
+                token_count = len(ENCODING.encode(meta_local["chunk"]))
                 print(
-                    f"  Chunk {idx}.{c_idx} (Tokens={ENCODING.count_tokens(meta_local['chunk'])}, Zeichen={len(meta_local['chunk'])})"
+                    f"  Chunk {idx}.{c_idx} (Tokens={token_count}, Zeichen={len(meta_local['chunk'])})"
                 )
                 print(meta_local["chunk"])
                 print("  ----")
