@@ -7,7 +7,7 @@ source .venv/bin/activate
 ```
 
 ```
-pip install docling
+pip install docling tiktoken psycopg2-binary
 ```
 
 oder
