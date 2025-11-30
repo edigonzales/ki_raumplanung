@@ -22,38 +22,7 @@ public class ChatController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatController.class);
 
-    private final ChatService chatService;
-    private final SseEmitterFactory emitterFactory;
-
-    public ChatController(ChatService chatService, SseEmitterFactory emitterFactory) {
-        this.chatService = chatService;
-        this.emitterFactory = emitterFactory;
+    public ChatController() {
     }
 
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public SseEmitter chat(@RequestBody ChatRequest request) {
-        SseEmitter emitter = emitterFactory.create();
-        chatService.streamAnswer(request.question(), new ChatService.StreamingResponseHandler() {
-            @Override
-            public void onToken(String token) {
-                try {
-                    emitter.send(token);
-                } catch (IOException ex) {
-                    LOGGER.warn("Unable to stream token: {}", token, ex);
-                    emitter.completeWithError(ex);
-                }
-            }
-
-            @Override
-            public void onComplete() {
-                emitter.complete();
-            }
-
-            @Override
-            public void onError(Throwable throwable) {
-                emitter.completeWithError(throwable);
-            }
-        });
-        return emitter;
-    }
 }
