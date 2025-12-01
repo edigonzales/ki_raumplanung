@@ -5,8 +5,10 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
@@ -51,11 +53,17 @@ class ChatFlowTests {
                         .param("prompt", "Test")
                         .param("selection", "1", "2")
                         .accept(MediaType.TEXT_EVENT_STREAM))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        result.getAsyncResult(2000L);
+
+        MvcResult dispatched = mockMvc.perform(asyncDispatch(result))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", containsString("text/event-stream")))
                 .andReturn();
 
-        String body = result.getResponse().getContentAsString();
+        String body = dispatched.getResponse().getContentAsString();
         assertThat(body).contains("data:").contains("Zusammenfassung");
     }
 }
