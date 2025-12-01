@@ -10,7 +10,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.util.StringUtils;
 
 @Configuration
@@ -19,12 +19,12 @@ public class ChatConfiguration {
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatConfiguration.class);
 
     @Bean
-    DocumentSearchService documentSearchService(ObjectProvider<NamedParameterJdbcTemplate> jdbcTemplateProvider,
+    DocumentSearchService documentSearchService(ObjectProvider<JdbcClient> jdbcClientProvider,
             ObjectProvider<DataSource> dataSourceProvider, QueryEmbeddingService embeddingService) {
-        NamedParameterJdbcTemplate template = jdbcTemplateProvider.getIfAvailable();
-        if (template != null && dataSourceProvider.getIfAvailable() != null && databaseIsReachable(template)) {
+        JdbcClient jdbcClient = jdbcClientProvider.getIfAvailable();
+        if (jdbcClient != null && dataSourceProvider.getIfAvailable() != null && databaseIsReachable(jdbcClient)) {
             LOGGER.info("Using JDBC-backed hybrid search");
-            return new JdbcHybridSearchService(template, embeddingService);
+            return new JdbcHybridSearchService(jdbcClient, embeddingService);
         }
         LOGGER.info("Falling back to mock hybrid search service");
         return new MockHybridSearchService();
@@ -79,9 +79,9 @@ public class ChatConfiguration {
         return new MockQueryEmbeddingService();
     }
 
-    private boolean databaseIsReachable(NamedParameterJdbcTemplate jdbcTemplate) {
+    private boolean databaseIsReachable(JdbcClient jdbcClient) {
         try {
-            jdbcTemplate.getJdbcTemplate().execute("SELECT 1 FROM arp_rag_vp.chunks LIMIT 1");
+            jdbcClient.sql("SELECT 1 FROM arp_rag_vp.chunks LIMIT 1").query(Integer.class).single();
             return true;
         } catch (Exception ex) {
             LOGGER.warn("Database not reachable, using mock search", ex);

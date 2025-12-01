@@ -10,16 +10,17 @@ import java.util.stream.Collectors;
 
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.util.StringUtils;
 
 public class JdbcHybridSearchService implements DocumentSearchService {
 
-    private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final JdbcClient jdbcClient;
     private final QueryEmbeddingService embeddingService;
 
-    public JdbcHybridSearchService(NamedParameterJdbcTemplate jdbcTemplate, QueryEmbeddingService embeddingService) {
-        this.jdbcTemplate = jdbcTemplate;
+    public JdbcHybridSearchService(JdbcClient jdbcClient, QueryEmbeddingService embeddingService) {
+        this.jdbcClient = jdbcClient;
         this.embeddingService = embeddingService;
     }
 
@@ -29,14 +30,11 @@ public class JdbcHybridSearchService implements DocumentSearchService {
             return Collections.emptyList();
         }
 
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("keywords", keywords)
-                .addValue("embedding", embeddingService.embed(keywords).map(this::toHalfvecLiteral).orElse(null))
-                .addValue("municipality", null)
-                .addValue("plan_type", null)
-                .addValue("limit", 20);
-
-        return jdbcTemplate.query(HybridSearchSql.HYBRID_SEARCH_SQL, params, documentChunkRowMapper());
+        SqlParameterSource params = buildSearchParams(keywords);
+        return jdbcClient.sql(HybridSearchSql.HYBRID_SEARCH_SQL)
+                .paramSource(params)
+                .query(documentChunkRowMapper())
+                .list();
     }
 
     @Override
@@ -53,12 +51,24 @@ public class JdbcHybridSearchService implements DocumentSearchService {
                 WHERE c.id IN (:ids)
                 ORDER BY c.id ASC
                 """;
-        return jdbcTemplate.query(sql, Map.of("ids", ids), documentChunkRowMapper());
+        return jdbcClient.sql(sql)
+                .param("ids", ids)
+                .query(documentChunkRowMapper())
+                .list();
     }
 
     @Override
     public String hybridSearchSql() {
         return HybridSearchSql.HYBRID_SEARCH_SQL;
+    }
+
+    MapSqlParameterSource buildSearchParams(String keywords) {
+        return new MapSqlParameterSource()
+                .addValue("keywords", keywords)
+                .addValue("embedding", embeddingService.embed(keywords).map(this::toHalfvecLiteral).orElse(null))
+                .addValue("municipality", null)
+                .addValue("plan_type", null)
+                .addValue("limit", 20);
     }
 
     private RowMapper<DocumentChunk> documentChunkRowMapper() {
