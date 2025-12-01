@@ -1,14 +1,11 @@
 package ch.so.arp.rag.chat;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.DataClassRowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -33,7 +30,7 @@ public class JdbcHybridSearchService implements DocumentSearchService {
         SqlParameterSource params = buildSearchParams(keywords);
         return jdbcClient.sql(HybridSearchSql.HYBRID_SEARCH_SQL)
                 .paramSource(params)
-                .query(documentChunkRowMapper())
+                .query(DataClassRowMapper.newInstance(DocumentChunk.class))
                 .list();
     }
 
@@ -53,7 +50,7 @@ public class JdbcHybridSearchService implements DocumentSearchService {
                 """;
         return jdbcClient.sql(sql)
                 .param("ids", ids)
-                .query(documentChunkRowMapper())
+                .query(DataClassRowMapper.newInstance(DocumentChunk.class))
                 .list();
     }
 
@@ -69,24 +66,6 @@ public class JdbcHybridSearchService implements DocumentSearchService {
                 .addValue("municipality", null)
                 .addValue("plan_type", null)
                 .addValue("limit", 20);
-    }
-
-    private RowMapper<DocumentChunk> documentChunkRowMapper() {
-        return (ResultSet rs, int rowNum) -> new DocumentChunk(
-                rs.getLong("id"),
-                getUuid(rs, "document_id"),
-                rs.getString("filename"),
-                rs.getString("title"),
-                rs.getString("section_path"),
-                rs.getString("snippet"));
-    }
-
-    private UUID getUuid(ResultSet rs, String column) throws SQLException {
-        Object value = rs.getObject(column);
-        if (value instanceof UUID uuid) {
-            return uuid;
-        }
-        return UUID.fromString(String.valueOf(value));
     }
 
     private String toHalfvecLiteral(List<Double> embedding) {
