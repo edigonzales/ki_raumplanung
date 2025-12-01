@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -15,9 +16,11 @@ import org.springframework.util.StringUtils;
 public class JdbcHybridSearchService implements DocumentSearchService {
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final QueryEmbeddingService embeddingService;
 
-    public JdbcHybridSearchService(NamedParameterJdbcTemplate jdbcTemplate) {
+    public JdbcHybridSearchService(NamedParameterJdbcTemplate jdbcTemplate, QueryEmbeddingService embeddingService) {
         this.jdbcTemplate = jdbcTemplate;
+        this.embeddingService = embeddingService;
     }
 
     @Override
@@ -28,7 +31,7 @@ public class JdbcHybridSearchService implements DocumentSearchService {
 
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("keywords", keywords)
-                .addValue("embedding", null)
+                .addValue("embedding", embeddingService.embed(keywords).map(this::toHalfvecLiteral).orElse(null))
                 .addValue("municipality", null)
                 .addValue("plan_type", null)
                 .addValue("limit", 20);
@@ -74,5 +77,20 @@ public class JdbcHybridSearchService implements DocumentSearchService {
             return uuid;
         }
         return UUID.fromString(String.valueOf(value));
+    }
+
+    private String toHalfvecLiteral(List<Double> embedding) {
+        return embedding == null || embedding.isEmpty() ? null
+                : embedding.stream()
+                        .map(this::formatComponent)
+                        .collect(Collectors.joining(",", "[", "]"));
+    }
+
+    private String formatComponent(Double value) {
+        if (value == null) {
+            return "0";
+        }
+        // halfvec accepts float4-compatible input; clamp to a readable precision.
+        return String.format(java.util.Locale.ROOT, "%.6f", value);
     }
 }

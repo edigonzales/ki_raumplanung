@@ -5,6 +5,7 @@ import javax.sql.DataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,11 +20,11 @@ public class ChatConfiguration {
 
     @Bean
     DocumentSearchService documentSearchService(ObjectProvider<NamedParameterJdbcTemplate> jdbcTemplateProvider,
-            ObjectProvider<DataSource> dataSourceProvider) {
+            ObjectProvider<DataSource> dataSourceProvider, QueryEmbeddingService embeddingService) {
         NamedParameterJdbcTemplate template = jdbcTemplateProvider.getIfAvailable();
         if (template != null && dataSourceProvider.getIfAvailable() != null && databaseIsReachable(template)) {
             LOGGER.info("Using JDBC-backed hybrid search");
-            return new JdbcHybridSearchService(template);
+            return new JdbcHybridSearchService(template, embeddingService);
         }
         LOGGER.info("Falling back to mock hybrid search service");
         return new MockHybridSearchService();
@@ -54,6 +55,28 @@ public class ChatConfiguration {
         }
         LOGGER.info("Falling back to mock chat service");
         return new MockChatService();
+    }
+
+    @Bean
+    QueryEmbeddingService queryEmbeddingService(Environment environment,
+            ObjectProvider<EmbeddingModel> embeddingModelProvider) {
+        boolean openAiEnabled = environment.getProperty("spring.ai.openai.enabled", Boolean.class, true)
+                && environment.getProperty("spring.ai.openai.embedding.enabled", Boolean.class, true);
+        String apiKey = environment.getProperty("spring.ai.openai.api-key");
+
+        if (!openAiEnabled || !StringUtils.hasText(apiKey)) {
+            LOGGER.info("Falling back to mock embedding service");
+            return new MockQueryEmbeddingService();
+        }
+
+        EmbeddingModel embeddingModel = embeddingModelProvider.getIfAvailable();
+        if (embeddingModel != null) {
+            LOGGER.info("Using OpenAI embedding service");
+            return new OpenAiQueryEmbeddingService(embeddingModel);
+        }
+
+        LOGGER.info("Embedding model unavailable, using mock embedding service");
+        return new MockQueryEmbeddingService();
     }
 
     private boolean databaseIsReachable(NamedParameterJdbcTemplate jdbcTemplate) {
