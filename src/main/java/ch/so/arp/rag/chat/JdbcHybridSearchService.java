@@ -60,12 +60,42 @@ public class JdbcHybridSearchService implements DocumentSearchService {
     }
 
     MapSqlParameterSource buildSearchParams(String keywords) {
+        String normalizedKeywords = normalizeKeywords(keywords);
         return new MapSqlParameterSource()
-                .addValue("keywords", keywords)
-                .addValue("embedding", embeddingService.embed(keywords).map(this::toHalfvecLiteral).orElse(null))
+                .addValue("keywords", normalizedKeywords)
+                .addValue(
+                        "embedding",
+                        embeddingService.embed(buildEmbeddingInput(keywords)).map(this::toHalfvecLiteral).orElse(null))
                 .addValue("municipality", null)
                 .addValue("plan_type", null)
                 .addValue("limit", 20);
+    }
+
+    private String normalizeKeywords(String keywords) {
+        List<String> terms = splitKeywords(keywords);
+        if (terms.isEmpty()) {
+            return keywords;
+        }
+        if (terms.size() == 1) {
+            return terms.getFirst();
+        }
+        return String.join(" OR ", terms);
+    }
+
+    private String buildEmbeddingInput(String keywords) {
+        List<String> terms = splitKeywords(keywords);
+        return terms.isEmpty() ? keywords : String.join(" ", terms);
+    }
+
+    private List<String> splitKeywords(String keywords) {
+        if (!StringUtils.hasText(keywords)) {
+            return List.of();
+        }
+        return List.of(keywords.split(","))
+                .stream()
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .toList();
     }
 
     private String toHalfvecLiteral(List<Double> embedding) {

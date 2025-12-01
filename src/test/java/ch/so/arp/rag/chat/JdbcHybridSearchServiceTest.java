@@ -39,6 +39,24 @@ class JdbcHybridSearchServiceTest {
     }
 
     @Test
+    void normalizesCommaSeparatedKeywordsToOrQuery() {
+        NamedParameterJdbcOperations operations = mock(NamedParameterJdbcOperations.class);
+        QueryEmbeddingService embeddingService = mock(QueryEmbeddingService.class);
+        when(embeddingService.embed("Hecke Baulinien")).thenReturn(Optional.empty());
+        when(operations.query(anyString(), any(SqlParameterSource.class), any(RowMapper.class)))
+                .thenReturn(List.of());
+
+        JdbcHybridSearchService service = new JdbcHybridSearchService(JdbcClient.create(operations), embeddingService);
+        service.search(" Hecke , Baulinien ");
+
+        ArgumentCaptor<MapSqlParameterSource> params = ArgumentCaptor.forClass(MapSqlParameterSource.class);
+        verify(operations).query(eq(HybridSearchSql.HYBRID_SEARCH_SQL), params.capture(), any(RowMapper.class));
+        verify(embeddingService).embed("Hecke Baulinien");
+
+        assertThat(params.getValue().getValue("keywords")).isEqualTo("Hecke OR Baulinien");
+    }
+
+    @Test
     void leavesEmbeddingNullWhenNotAvailable() {
         NamedParameterJdbcOperations operations = mock(NamedParameterJdbcOperations.class);
         QueryEmbeddingService embeddingService = mock(QueryEmbeddingService.class);
