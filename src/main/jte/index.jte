@@ -1,4 +1,4 @@
-@param java.util.List<ch.so.arp.rag.chat.DocumentChunk> results
+@param java.util.List<ch.so.arp.rag.chat.DocumentResult> results
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,6 +10,10 @@
         .layout { display: flex; gap: 1rem; align-items: flex-start; }
         .column { flex: 1; }
         .result-card { border: 1px solid #000; padding: 0.5rem; margin-bottom: 0.5rem; }
+        .document-header { display: flex; justify-content: space-between; gap: 0.5rem; align-items: flex-start; }
+        .section-card { border: 1px solid #ddd; padding: 0.5rem; margin-top: 0.5rem; background: #fafafa; }
+        .section-card details { margin-top: 0.25rem; }
+        .section-card summary { cursor: pointer; }
     </style>
 </head>
 <body>
@@ -32,7 +36,7 @@
     <div class="column">
         <h2>Schritt 2: Kontext wählen und Aufgabe stellen</h2>
         <form hx-post="/summary" hx-target="#summary-panel" hx-swap="innerHTML"
-              hx-include="#search-results input[type=checkbox]:checked">
+              hx-include="#search-results input[name=selection]:checked">
             <label for="prompt">Aufgabe</label><br>
             <textarea id="prompt" name="prompt" rows="4" cols="50" required>Fasse die ausgewählten Abschnitte zusammen.</textarea><br>
             <button type="submit">Antwort generieren</button>
@@ -60,21 +64,98 @@
 
     const searchResults = document.getElementById('search-results');
     if (searchResults) {
+        const setChunkSelection = (scope, checked) => {
+            scope.querySelectorAll('.chunk-selection').forEach((checkbox) => {
+                checkbox.checked = checked;
+            });
+        };
+
+        const updateSectionState = (sectionCard) => {
+            const sectionToggle = sectionCard.querySelector('[data-section-toggle]');
+            const chunkCheckboxes = Array.from(sectionCard.querySelectorAll('.chunk-selection'));
+            const checkedChunks = chunkCheckboxes.filter((checkbox) => checkbox.checked);
+            if (!sectionToggle) {
+                return;
+            }
+            sectionToggle.checked = chunkCheckboxes.length > 0 && checkedChunks.length === chunkCheckboxes.length;
+            sectionToggle.indeterminate = checkedChunks.length > 0 && checkedChunks.length < chunkCheckboxes.length;
+        };
+
+        const updateDocumentState = (documentCard) => {
+            const documentToggle = documentCard.querySelector('[data-document-toggle]');
+            const sectionToggles = Array.from(documentCard.querySelectorAll('[data-section-toggle]'));
+            if (!documentToggle || sectionToggles.length === 0) {
+                return;
+            }
+            const allSectionsSelected = sectionToggles.every((toggle) => toggle.checked);
+            const anySectionSelected = sectionToggles.some((toggle) => toggle.checked || toggle.indeterminate);
+            documentToggle.checked = allSectionsSelected;
+            documentToggle.indeterminate = anySectionSelected && !allSectionsSelected;
+        };
+
+        const refreshDocumentStates = () => {
+            searchResults.querySelectorAll('[data-document-card]').forEach((card) => {
+                card.querySelectorAll('[data-section-card]').forEach(updateSectionState);
+                updateDocumentState(card);
+            });
+        };
+
         searchResults.addEventListener('click', (event) => {
             const target = event.target;
             if (target && target.matches('[data-select-all]')) {
-                const checkboxes = searchResults.querySelectorAll('input[type="checkbox"]');
-                const allSelected = Array.from(checkboxes).every((checkbox) => checkbox.checked);
+                const chunkCheckboxes = searchResults.querySelectorAll('.chunk-selection');
+                const allSelected = Array.from(chunkCheckboxes).every((checkbox) => checkbox.checked);
                 const newState = !allSelected;
 
-                checkboxes.forEach((checkbox) => {
+                chunkCheckboxes.forEach((checkbox) => {
                     checkbox.checked = newState;
                 });
+
+                refreshDocumentStates();
 
                 const selectLabel = target.dataset.labelSelect || 'Alle Abschnitte auswählen';
                 const deselectLabel = target.dataset.labelDeselect || 'Alle Abschnitte abwählen';
                 target.textContent = newState ? deselectLabel : selectLabel;
                 target.setAttribute('aria-pressed', String(newState));
+            }
+        });
+
+        searchResults.addEventListener('change', (event) => {
+            const target = event.target;
+            if (target && target.matches('[data-document-toggle]')) {
+                const documentCard = target.closest('[data-document-card]');
+                if (!documentCard) {
+                    return;
+                }
+                documentCard.querySelectorAll('[data-section-card]').forEach((sectionCard) => {
+                    setChunkSelection(sectionCard, target.checked);
+                    updateSectionState(sectionCard);
+                });
+                updateDocumentState(documentCard);
+            }
+
+            if (target && target.matches('[data-section-toggle]')) {
+                const sectionCard = target.closest('[data-section-card]');
+                if (!sectionCard) {
+                    return;
+                }
+                setChunkSelection(sectionCard, target.checked);
+                updateSectionState(sectionCard);
+                const documentCard = sectionCard.closest('[data-document-card]');
+                if (documentCard) {
+                    updateDocumentState(documentCard);
+                }
+            }
+
+            if (target && target.matches('.chunk-selection')) {
+                const sectionCard = target.closest('[data-section-card]');
+                if (sectionCard) {
+                    updateSectionState(sectionCard);
+                    const documentCard = sectionCard.closest('[data-document-card]');
+                    if (documentCard) {
+                        updateDocumentState(documentCard);
+                    }
+                }
             }
         });
     }
