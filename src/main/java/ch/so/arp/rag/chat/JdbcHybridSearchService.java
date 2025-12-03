@@ -22,12 +22,12 @@ public class JdbcHybridSearchService implements DocumentSearchService {
     }
 
     @Override
-    public List<DocumentChunk> search(String keywords) {
+    public List<DocumentChunk> search(String keywords, double lexicalWeight) {
         if (!StringUtils.hasText(keywords)) {
             return Collections.emptyList();
         }
 
-        SqlParameterSource params = buildSearchParams(keywords);
+        SqlParameterSource params = buildSearchParams(keywords, lexicalWeight);
         
         List<DocumentChunk> chunks = jdbcClient.sql(HybridSearchSql.HYBRID_SEARCH_SQL)
                 .paramSource(params)
@@ -68,16 +68,30 @@ public class JdbcHybridSearchService implements DocumentSearchService {
         return HybridSearchSql.HYBRID_SEARCH_SQL;
     }
 
-    MapSqlParameterSource buildSearchParams(String keywords) {
+    MapSqlParameterSource buildSearchParams(String keywords, double lexicalWeight) {
         String normalizedKeywords = normalizeKeywords(keywords);
         return new MapSqlParameterSource()
                 .addValue("keywords", normalizedKeywords)
                 .addValue(
                         "embedding",
                         embeddingService.embed(buildEmbeddingInput(keywords)).map(this::toHalfvecLiteral).orElse(null))
+                .addValue("lexical_weight", normalizeLexicalWeight(lexicalWeight))
                 .addValue("municipality", null)
                 .addValue("plan_type", null)
                 .addValue("limit", 20);
+    }
+
+    double normalizeLexicalWeight(double lexicalWeight) {
+        if (Double.isNaN(lexicalWeight)) {
+            return 0.6d;
+        }
+        if (lexicalWeight < 0.0d) {
+            return 0.0d;
+        }
+        if (lexicalWeight > 1.0d) {
+            return 1.0d;
+        }
+        return lexicalWeight;
     }
 
     private String normalizeKeywords(String keywords) {

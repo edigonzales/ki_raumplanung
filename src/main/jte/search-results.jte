@@ -4,7 +4,8 @@
     <p>Keine Treffer gefunden.</p>
 @endif
 @if(!results.isEmpty())
-    <button type="button" data-select-all>Alle Abschnitte auswählen</button>
+    <button type="button" data-select-all data-label-select="Alle Abschnitte auswählen"
+            data-label-deselect="Alle Abschnitte abwählen" aria-pressed="false">Alle Abschnitte auswählen</button>
 @endif
 @for(ch.so.arp.rag.chat.DocumentChunk chunk : results)
     <div class="result-card">

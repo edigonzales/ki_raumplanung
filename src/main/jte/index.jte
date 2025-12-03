@@ -21,8 +21,8 @@
             <label for="keywords">Stichworte</label><br>
             <input type="text" id="keywords" name="keywords" required><br>
             <label for="lexicalWeight">Lexikalisches Gewicht (0 = semantisch, 1 = lexikalisch):</label><br>
-            <input type="range" id="lexicalWeight" name="lexicalWeight" min="0" max="1" step="0.05" value="0.5">
-            <span id="lexicalWeightValue">0.5</span><br>
+            <input type="range" id="lexicalWeight" name="lexicalWeight" min="0" max="1" step="0.05" value="0.6">
+            <span id="lexicalWeightValue">0.60</span><br>
             <button type="submit">Suchen</button>
         </form>
         <div id="search-results">
@@ -64,9 +64,17 @@
             const target = event.target;
             if (target && target.matches('[data-select-all]')) {
                 const checkboxes = searchResults.querySelectorAll('input[type="checkbox"]');
+                const allSelected = Array.from(checkboxes).every((checkbox) => checkbox.checked);
+                const newState = !allSelected;
+
                 checkboxes.forEach((checkbox) => {
-                    checkbox.checked = true;
+                    checkbox.checked = newState;
                 });
+
+                const selectLabel = target.dataset.labelSelect || 'Alle Abschnitte auswählen';
+                const deselectLabel = target.dataset.labelDeselect || 'Alle Abschnitte abwählen';
+                target.textContent = newState ? deselectLabel : selectLabel;
+                target.setAttribute('aria-pressed', String(newState));
             }
         });
     }

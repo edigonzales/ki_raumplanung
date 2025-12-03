@@ -30,7 +30,8 @@ class ChatFlowTests {
     void searchReturnsResults() throws Exception {
         mockMvc.perform(post("/search")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                        .param("keywords", "Hecke"))
+                        .param("keywords", "Hecke")
+                        .param("lexicalWeight", "0.6"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Gefundene Abschnitte")))
                 .andExpect(content().string(containsString("Hecke")));

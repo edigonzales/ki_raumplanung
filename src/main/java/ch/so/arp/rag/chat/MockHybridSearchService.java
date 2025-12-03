@@ -8,7 +8,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import org.springframework.util.StringUtils;
 
@@ -24,7 +23,7 @@ public class MockHybridSearchService implements DocumentSearchService {
     }
 
     @Override
-    public List<DocumentChunk> search(String keywords) {
+    public List<DocumentChunk> search(String keywords, double lexicalWeight) {
         if (!StringUtils.hasText(keywords)) {
             return Collections.emptyList();
         }
@@ -33,19 +32,14 @@ public class MockHybridSearchService implements DocumentSearchService {
         List<DocumentChunk> matches = new ArrayList<>();
         for (DocumentChunk chunk : indexedChunks.values()) {
             String haystack = (chunk.title() + " " + chunk.sectionPath() + " " + chunk.snippet()).toLowerCase(Locale.ROOT);
-            if (haystack.contains(normalized)) {
-                matches.add(chunk);
-                continue;
-            }
-
-            if (mockVectorScore(haystack, normalized) > 0.4) {
-                matches.add(chunk);
+            double keywordScore = haystack.contains(normalized) ? 1.0d : 0.0d;
+            double vectorScore = mockVectorScore(haystack, normalized);
+            if (keywordScore > 0 || vectorScore > 0.4) {
+                matches.add(applyScores(chunk, keywordScore, vectorScore, lexicalWeight));
             }
         }
 
-        return matches.stream()
-                .sorted(Comparator.comparing(DocumentChunk::id))
-                .collect(Collectors.toList());
+        return matches.stream().sorted(Comparator.comparing(DocumentChunk::id)).toList();
     }
 
     @Override
@@ -53,10 +47,7 @@ public class MockHybridSearchService implements DocumentSearchService {
         if (ids == null || ids.isEmpty()) {
             return Collections.emptyList();
         }
-        return ids.stream()
-                .map(indexedChunks::get)
-                .filter(chunk -> chunk != null)
-                .collect(Collectors.toList());
+        return ids.stream().map(indexedChunks::get).filter(chunk -> chunk != null).toList();
     }
 
     @Override
@@ -127,5 +118,35 @@ public class MockHybridSearchService implements DocumentSearchService {
     private double mockVectorScore(String haystack, String needle) {
         int distance = Math.abs(haystack.length() - haystack.replace(needle, "").length());
         return Math.min(1.0, distance / (double) (haystack.length() + 1));
+    }
+
+    private DocumentChunk applyScores(DocumentChunk chunk, double keywordScore, double vectorScore, double lexicalWeight) {
+        double normalizedWeight = normalizeLexicalWeight(lexicalWeight);
+        double hybridScore = normalizedWeight * keywordScore + (1.0d - normalizedWeight) * vectorScore;
+        return new DocumentChunk(
+                chunk.id(),
+                chunk.documentId(),
+                chunk.filename(),
+                chunk.title(),
+                chunk.sectionPath(),
+                chunk.snippet(),
+                chunk.municipality(),
+                chunk.planType(),
+                keywordScore,
+                vectorScore,
+                hybridScore);
+    }
+
+    private double normalizeLexicalWeight(double lexicalWeight) {
+        if (Double.isNaN(lexicalWeight)) {
+            return 0.6d;
+        }
+        if (lexicalWeight < 0.0d) {
+            return 0.0d;
+        }
+        if (lexicalWeight > 1.0d) {
+            return 1.0d;
+        }
+        return lexicalWeight;
     }
 }

@@ -12,6 +12,8 @@ final class HybridSearchSql {
                     :embedding::halfvec                           AS emb,
                     :municipality                                 AS municipality,
                     :plan_type                                    AS plan_type,
+                    GREATEST(LEAST(COALESCE(:lexical_weight, 0.6), 1.0), 0.0) AS lexical_weight,
+                    1 - GREATEST(LEAST(COALESCE(:lexical_weight, 0.6), 1.0), 0.0) AS vector_weight,
                     COALESCE(:limit, 20)                           AS alimit
             ), ranked AS (
                 SELECT
@@ -25,7 +27,7 @@ final class HybridSearchSql {
                     c.plan_type,
                     ts_rank_cd(c.tsv, p.q)           AS keyword_score,
                     1 - (c.embedding <=> p.emb)      AS vector_score,
-                    (0.6 * ts_rank_cd(c.tsv, p.q) + 0.4 * (1 - (c.embedding <=> p.emb))) AS hybrid_score
+                    (p.lexical_weight * ts_rank_cd(c.tsv, p.q) + p.vector_weight * (1 - (c.embedding <=> p.emb))) AS hybrid_score
                 FROM arp_rag_vp.chunks c
                 JOIN arp_rag_vp.documents d ON d.id = c.document_id
                 LEFT JOIN arp_rag_vp.sections s ON s.id = c.section_id
