@@ -21,7 +21,9 @@ final class HybridSearchSql {
                     c.document_id,
                     d.filename,
                     d.title,
+                    c.section_id,
                     s.section_path,
+                    string_agg(c.text, ' ' ORDER BY c.id) OVER (PARTITION BY COALESCE(c.section_id, c.id)) AS section_text,
                     substring(c.text FROM 1 FOR 240) AS snippet,
                     c.municipality,
                     c.plan_type,
@@ -39,7 +41,7 @@ final class HybridSearchSql {
                   AND (p.municipality IS NULL OR c.municipality = p.municipality)
                   AND (p.plan_type IS NULL OR c.plan_type = p.plan_type)
             )
-            SELECT id, document_id, filename, title, section_path, snippet,
+            SELECT id, document_id, filename, title, section_id, section_path, section_text, snippet,
                    municipality, plan_type, keyword_score, vector_score, hybrid_score
             FROM ranked
             ORDER BY hybrid_score DESC NULLS LAST, id ASC
