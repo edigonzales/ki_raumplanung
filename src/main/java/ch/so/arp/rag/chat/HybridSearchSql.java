@@ -12,7 +12,7 @@ final class HybridSearchSql {
                     :embedding::halfvec                           AS emb,
                     :municipality                                 AS municipality,
                     :plan_type                                    AS plan_type,
-                    COALESCE(:limit, 20)                           AS limit
+                    COALESCE(:limit, 20)                           AS alimit
             ), ranked AS (
                 SELECT
                     c.id,
@@ -41,6 +41,6 @@ final class HybridSearchSql {
                    municipality, plan_type, keyword_score, vector_score, hybrid_score
             FROM ranked
             ORDER BY hybrid_score DESC NULLS LAST, id ASC
-            LIMIT (SELECT limit FROM params);
+            LIMIT (SELECT alimit FROM params);
             """;
 }

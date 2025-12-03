@@ -28,10 +28,18 @@ public class JdbcHybridSearchService implements DocumentSearchService {
         }
 
         SqlParameterSource params = buildSearchParams(keywords);
-        return jdbcClient.sql(HybridSearchSql.HYBRID_SEARCH_SQL)
+        
+        List<DocumentChunk> chunks = jdbcClient.sql(HybridSearchSql.HYBRID_SEARCH_SQL)
                 .paramSource(params)
                 .query(DataClassRowMapper.newInstance(DocumentChunk.class))
                 .list();
+        
+        
+        for (var chunk : chunks) {
+            System.out.println(chunk.filename() + " --- " + chunk.hybridScore() + " --- " + chunk.keywordScore() + " --- " + chunk.vectorScore());
+        }
+        
+        return chunks;
     }
 
     @Override

@@ -14,5 +14,7 @@ public record DocumentChunk(
         String snippet,
         String municipality,
         String planType,
+        Double keywordScore,
+        Double vectorScore,
         Double hybridScore) {
 }
