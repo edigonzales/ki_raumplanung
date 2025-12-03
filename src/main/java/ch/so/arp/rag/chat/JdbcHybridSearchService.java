@@ -33,11 +33,10 @@ public class JdbcHybridSearchService implements DocumentSearchService {
                 .paramSource(params)
                 .query(DataClassRowMapper.newInstance(DocumentChunk.class))
                 .list();
-        
-        
-        for (var chunk : chunks) {
-            System.out.println(chunk.filename() + " --- " + chunk.hybridScore() + " --- " + chunk.keywordScore() + " --- " + chunk.vectorScore());
-        }
+    
+//        for (var chunk : chunks) {
+//            System.out.println(chunk.filename() + " --- " + chunk.hybridScore() + " --- " + chunk.keywordScore() + " --- " + chunk.vectorScore());
+//        }
         
         return chunks;
     }
