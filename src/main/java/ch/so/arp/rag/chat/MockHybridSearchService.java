@@ -121,7 +121,7 @@ public class MockHybridSearchService implements DocumentSearchService {
             Double hybridScore) {
         indexedChunks.put(
                 id,
-                new DocumentChunk(id, documentId, filename, title, path, snippet, municipality, planType, hybridScore));
+                new DocumentChunk(id, documentId, filename, title, path, snippet, municipality, planType, hybridScore, hybridScore, hybridScore));
     }
 
     private double mockVectorScore(String haystack, String needle) {
