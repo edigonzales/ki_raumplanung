@@ -2,7 +2,6 @@ package ch.so.arp.rag.chat;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.jdbc.core.DataClassRowMapper;
@@ -22,7 +21,7 @@ public class JdbcHybridSearchService implements DocumentSearchService {
     }
 
     @Override
-    public List<DocumentChunk> search(String keywords, double lexicalWeight) {
+    public List<DocumentResult> search(String keywords, double lexicalWeight) {
         if (!StringUtils.hasText(keywords)) {
             return Collections.emptyList();
         }
@@ -38,7 +37,7 @@ public class JdbcHybridSearchService implements DocumentSearchService {
 //            System.out.println(chunk.filename() + " --- " + chunk.hybridScore() + " --- " + chunk.keywordScore() + " --- " + chunk.vectorScore());
 //        }
         
-        return chunks;
+        return DocumentResult.fromChunks(chunks);
     }
 
     @Override
@@ -47,9 +46,20 @@ public class JdbcHybridSearchService implements DocumentSearchService {
             return Collections.emptyList();
         }
         String sql = """
-                SELECT c.id, c.document_id, d.filename, d.title, s.section_path,
-                       substring(c.text FROM 1 FOR 240) AS snippet,
-                       c.municipality, c.plan_type, NULL::double precision AS hybrid_score
+                SELECT
+                    c.id,
+                    c.document_id,
+                    d.filename,
+                    d.title,
+                    c.section_id,
+                    s.section_path,
+                    string_agg(c.text, ' ' ORDER BY c.id) OVER (PARTITION BY COALESCE(c.section_id, c.id)) AS section_text,
+                    substring(c.text FROM 1 FOR 240) AS snippet,
+                    c.municipality,
+                    c.plan_type,
+                    NULL::double precision AS keyword_score,
+                    NULL::double precision AS vector_score,
+                    NULL::double precision AS hybrid_score
                 FROM arp_rag_vp.chunks c
                 JOIN arp_rag_vp.documents d ON d.id = c.document_id
                 LEFT JOIN arp_rag_vp.sections s ON s.id = c.section_id
