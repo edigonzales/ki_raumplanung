@@ -30,12 +30,13 @@ class JdbcHybridSearchServiceTest {
                 .thenReturn(List.of());
 
         JdbcHybridSearchService service = new JdbcHybridSearchService(JdbcClient.create(operations), embeddingService);
-        service.search("hello");
+        service.search("hello", 0.6);
 
         ArgumentCaptor<MapSqlParameterSource> params = ArgumentCaptor.forClass(MapSqlParameterSource.class);
         verify(operations).query(eq(HybridSearchSql.HYBRID_SEARCH_SQL), params.capture(), any(RowMapper.class));
 
         assertThat(params.getValue().getValue("embedding")).isEqualTo("[0.100000,0.200000]");
+        assertThat(params.getValue().getValue("lexical_weight")).isEqualTo(0.6d);
     }
 
     @Test
@@ -47,13 +48,14 @@ class JdbcHybridSearchServiceTest {
                 .thenReturn(List.of());
 
         JdbcHybridSearchService service = new JdbcHybridSearchService(JdbcClient.create(operations), embeddingService);
-        service.search(" Hecke , Baulinien ");
+        service.search(" Hecke , Baulinien ", 0.75);
 
         ArgumentCaptor<MapSqlParameterSource> params = ArgumentCaptor.forClass(MapSqlParameterSource.class);
         verify(operations).query(eq(HybridSearchSql.HYBRID_SEARCH_SQL), params.capture(), any(RowMapper.class));
         verify(embeddingService).embed("Hecke Baulinien");
 
         assertThat(params.getValue().getValue("keywords")).isEqualTo("Hecke OR Baulinien");
+        assertThat(params.getValue().getValue("lexical_weight")).isEqualTo(0.75d);
     }
 
     @Test
@@ -65,11 +67,12 @@ class JdbcHybridSearchServiceTest {
                 .thenReturn(List.of());
 
         JdbcHybridSearchService service = new JdbcHybridSearchService(JdbcClient.create(operations), embeddingService);
-        service.search("hello");
+        service.search("hello", 0.25);
 
         ArgumentCaptor<MapSqlParameterSource> params = ArgumentCaptor.forClass(MapSqlParameterSource.class);
         verify(operations).query(eq(HybridSearchSql.HYBRID_SEARCH_SQL), params.capture(), any(RowMapper.class));
 
         assertThat(params.getValue().getValue("embedding")).isNull();
+        assertThat(params.getValue().getValue("lexical_weight")).isEqualTo(0.25d);
     }
 }
