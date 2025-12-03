@@ -21,6 +21,8 @@ final class HybridSearchSql {
                     d.title,
                     s.section_path,
                     substring(c.text FROM 1 FOR 240) AS snippet,
+                    c.municipality,
+                    c.plan_type,
                     ts_rank_cd(c.tsv, p.q)           AS keyword_score,
                     1 - (c.embedding <=> p.emb)      AS vector_score,
                     (0.6 * ts_rank_cd(c.tsv, p.q) + 0.4 * (1 - (c.embedding <=> p.emb))) AS hybrid_score
@@ -36,7 +38,7 @@ final class HybridSearchSql {
                   AND (p.plan_type IS NULL OR c.plan_type = p.plan_type)
             )
             SELECT id, document_id, filename, title, section_path, snippet,
-                   keyword_score, vector_score, hybrid_score
+                   municipality, plan_type, keyword_score, vector_score, hybrid_score
             FROM ranked
             ORDER BY hybrid_score DESC NULLS LAST, id ASC
             LIMIT (SELECT limit FROM params);

@@ -11,5 +11,8 @@ public record DocumentChunk(
         String filename,
         String title,
         String sectionPath,
-        String snippet) {
+        String snippet,
+        String municipality,
+        String planType,
+        Double hybridScore) {
 }

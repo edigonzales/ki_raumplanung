@@ -41,7 +41,8 @@ public class JdbcHybridSearchService implements DocumentSearchService {
         }
         String sql = """
                 SELECT c.id, c.document_id, d.filename, d.title, s.section_path,
-                       substring(c.text FROM 1 FOR 240) AS snippet
+                       substring(c.text FROM 1 FOR 240) AS snippet,
+                       c.municipality, c.plan_type, NULL::double precision AS hybrid_score
                 FROM arp_rag_vp.chunks c
                 JOIN arp_rag_vp.documents d ON d.id = c.document_id
                 LEFT JOIN arp_rag_vp.sections s ON s.id = c.section_id

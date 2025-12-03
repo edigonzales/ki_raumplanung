@@ -67,18 +67,61 @@ public class MockHybridSearchService implements DocumentSearchService {
     private void seedData() {
         UUID doc1 = UUID.fromString("11111111-1111-1111-1111-111111111111");
         UUID doc2 = UUID.fromString("22222222-2222-2222-2222-222222222222");
-        addChunk(1, doc1, "naturwerte.pdf", "Naturwerte", "2 > Landschaft > Naturwerte > Hecken",
-                "Die Hecke entlang des Weges bildet einen wertvollen Lebensraum und ist zu erhalten.");
-        addChunk(2, doc1, "naturwerte.pdf", "Naturwerte", "2 > Landschaft > Naturwerte > Gewässer",
-                "Das Bachufer ist als Vernetzungsachse zu stärken und darf nicht verbaut werden.");
-        addChunk(3, doc2, "gestaltung.pdf", "Gestaltungsplan", "1 > Freiraum > Pflanzkonzept",
-                "Hecken mit einheimischen Sträuchern strukturieren den Spielplatz und bieten Sichtschutz.");
-        addChunk(4, doc2, "gestaltung.pdf", "Gestaltungsplan", "3 > Verkehr > Fusswege",
-                "Neue Fusswegverbindungen sind begrünt und mit Bäumen begleitet.");
+        addChunk(
+                1,
+                doc1,
+                "naturwerte.pdf",
+                "Naturwerte",
+                "2 > Landschaft > Naturwerte > Hecken",
+                "Die Hecke entlang des Weges bildet einen wertvollen Lebensraum und ist zu erhalten.",
+                "Solothurn",
+                "Gestaltungsplan",
+                0.82);
+        addChunk(
+                2,
+                doc1,
+                "naturwerte.pdf",
+                "Naturwerte",
+                "2 > Landschaft > Naturwerte > Gewässer",
+                "Das Bachufer ist als Vernetzungsachse zu stärken und darf nicht verbaut werden.",
+                "Solothurn",
+                "Gestaltungsplan",
+                0.73);
+        addChunk(
+                3,
+                doc2,
+                "gestaltung.pdf",
+                "Gestaltungsplan",
+                "1 > Freiraum > Pflanzkonzept",
+                "Hecken mit einheimischen Sträuchern strukturieren den Spielplatz und bieten Sichtschutz.",
+                "Olten",
+                "Sondernutzungsplan",
+                0.77);
+        addChunk(
+                4,
+                doc2,
+                "gestaltung.pdf",
+                "Gestaltungsplan",
+                "3 > Verkehr > Fusswege",
+                "Neue Fusswegverbindungen sind begrünt und mit Bäumen begleitet.",
+                "Olten",
+                "Sondernutzungsplan",
+                0.61);
     }
 
-    private void addChunk(long id, UUID documentId, String filename, String title, String path, String snippet) {
-        indexedChunks.put(id, new DocumentChunk(id, documentId, filename, title, path, snippet));
+    private void addChunk(
+            long id,
+            UUID documentId,
+            String filename,
+            String title,
+            String path,
+            String snippet,
+            String municipality,
+            String planType,
+            Double hybridScore) {
+        indexedChunks.put(
+                id,
+                new DocumentChunk(id, documentId, filename, title, path, snippet, municipality, planType, hybridScore));
     }
 
     private double mockVectorScore(String haystack, String needle) {
