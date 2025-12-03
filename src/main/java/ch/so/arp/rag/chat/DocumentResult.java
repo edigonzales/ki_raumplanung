@@ -1,7 +1,6 @@
 package ch.so.arp.rag.chat;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -111,33 +110,62 @@ public record DocumentResult(
     }
 
     private static Optional<String> mergeChunkTexts(List<DocumentChunk> sectionChunks) {
-        List<List<String>> chunkWords = sectionChunks.stream()
+        List<String> chunkTexts = sectionChunks.stream()
                 .map(DocumentChunk::text)
                 .filter(Objects::nonNull)
-                .map(String::strip)
+                .map(DocumentResult::normalizeWhitespace)
                 .filter(text -> !text.isBlank())
-                .map(text -> (List<String>) Arrays.asList(text.split("\\s+")))
-                .filter(words -> !words.isEmpty())
                 .toList();
 
-        if (chunkWords.isEmpty()) {
+        if (chunkTexts.isEmpty()) {
             return Optional.empty();
         }
 
-        List<String> merged = new ArrayList<>(chunkWords.getFirst());
-        for (int i = 1; i < chunkWords.size(); i++) {
-            List<String> current = chunkWords.get(i);
-            int maxOverlap = Math.min(merged.size(), current.size());
-            int overlap = 0;
-            for (int candidate = maxOverlap; candidate >= 5; candidate--) {
-                if (merged.subList(merged.size() - candidate, merged.size()).equals(current.subList(0, candidate))) {
-                    overlap = candidate;
-                    break;
-                }
+        StringBuilder merged = new StringBuilder(chunkTexts.getFirst());
+        for (int i = 1; i < chunkTexts.size(); i++) {
+            String current = chunkTexts.get(i);
+            int overlap = findCharacterOverlap(merged, current);
+            if (overlap == 0 && needsPadding(merged, current)) {
+                merged.append(' ');
             }
-            merged.addAll(current.subList(overlap, current.size()));
+            merged.append(current, overlap, current.length());
         }
 
-        return Optional.of(String.join(" ", merged));
+        return Optional.of(merged.toString());
+    }
+
+    private static String normalizeWhitespace(String text) {
+        return text.strip().replaceAll("\\s+", " ");
+    }
+
+    private static boolean needsPadding(StringBuilder merged, String current) {
+        return !merged.isEmpty() && !Character.isWhitespace(merged.charAt(merged.length() - 1))
+                && !current.isEmpty() && !Character.isWhitespace(current.charAt(0));
+    }
+
+    private static int findCharacterOverlap(StringBuilder merged, String current) {
+        int maxOverlap = Math.min(merged.length(), current.length());
+        final int minOverlap = 8;
+        for (int candidate = maxOverlap; candidate >= minOverlap; candidate--) {
+            int mergedStart = merged.length() - candidate;
+            if (mergedStart < 0) {
+                continue;
+            }
+            if (regionMatchesIgnoreCase(merged, mergedStart, current, 0, candidate)) {
+                return candidate;
+            }
+        }
+        return 0;
+    }
+
+    private static boolean regionMatchesIgnoreCase(CharSequence left, int leftStart, CharSequence right, int rightStart, int length) {
+        for (int i = 0; i < length; i++) {
+            char l = left.charAt(leftStart + i);
+            char r = right.charAt(rightStart + i);
+            if (Character.toLowerCase(l) != Character.toLowerCase(r)) {
+                return false;
+            }
+        }
+        return true;
     }
 }
