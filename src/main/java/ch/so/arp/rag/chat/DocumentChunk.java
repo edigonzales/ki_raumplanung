@@ -12,6 +12,7 @@ public record DocumentChunk(
         String title,
         Long sectionId,
         String sectionPath,
+        String text,
         String sectionText,
         String snippet,
         String municipality,

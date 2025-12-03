@@ -1,10 +1,12 @@
 package ch.so.arp.rag.chat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -64,7 +66,10 @@ public record DocumentResult(
 
         List<SectionResult> sections = new ArrayList<>();
         for (Map.Entry<SectionKey, List<DocumentChunk>> entry : groupedSections.entrySet()) {
-            List<DocumentChunk> sectionChunks = entry.getValue();
+            List<DocumentChunk> sectionChunks = entry.getValue()
+                    .stream()
+                    .sorted(Comparator.comparingLong(DocumentChunk::id))
+                    .toList();
             Double sectionScore = highestHybridScore(sectionChunks);
             List<Long> chunkIds = sectionChunks.stream().map(DocumentChunk::id).toList();
             sections.add(new SectionResult(
@@ -90,15 +95,49 @@ public record DocumentResult(
     }
 
     private static String resolveSectionText(List<DocumentChunk> sectionChunks) {
-        return sectionChunks.stream()
-                .map(DocumentChunk::sectionText)
-                .filter(Objects::nonNull)
+        Optional<String> mergedFromChunks = mergeChunkTexts(sectionChunks);
+        return mergedFromChunks
                 .filter(text -> !text.isBlank())
-                .findFirst()
                 .orElseGet(() -> sectionChunks.stream()
-                        .map(DocumentChunk::snippet)
+                        .map(DocumentChunk::sectionText)
                         .filter(Objects::nonNull)
                         .filter(text -> !text.isBlank())
-                        .collect(Collectors.joining(" ")));
+                        .findFirst()
+                        .orElseGet(() -> sectionChunks.stream()
+                                .map(DocumentChunk::snippet)
+                                .filter(Objects::nonNull)
+                                .filter(text -> !text.isBlank())
+                                .collect(Collectors.joining(" "))));
+    }
+
+    private static Optional<String> mergeChunkTexts(List<DocumentChunk> sectionChunks) {
+        List<List<String>> chunkWords = sectionChunks.stream()
+                .map(DocumentChunk::text)
+                .filter(Objects::nonNull)
+                .map(String::strip)
+                .filter(text -> !text.isBlank())
+                .map(text -> (List<String>) Arrays.asList(text.split("\\s+")))
+                .filter(words -> !words.isEmpty())
+                .toList();
+
+        if (chunkWords.isEmpty()) {
+            return Optional.empty();
+        }
+
+        List<String> merged = new ArrayList<>(chunkWords.getFirst());
+        for (int i = 1; i < chunkWords.size(); i++) {
+            List<String> current = chunkWords.get(i);
+            int maxOverlap = Math.min(merged.size(), current.size());
+            int overlap = 0;
+            for (int candidate = maxOverlap; candidate >= 5; candidate--) {
+                if (merged.subList(merged.size() - candidate, merged.size()).equals(current.subList(0, candidate))) {
+                    overlap = candidate;
+                    break;
+                }
+            }
+            merged.addAll(current.subList(overlap, current.size()));
+        }
+
+        return Optional.of(String.join(" ", merged));
     }
 }

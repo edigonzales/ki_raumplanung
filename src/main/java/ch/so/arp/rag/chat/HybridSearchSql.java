@@ -53,6 +53,7 @@ final class HybridSearchSql {
                     f.title,
                     f.section_id,
                     f.section_path,
+                    f.text,
                     st.section_text,
                     f.snippet,
                     f.municipality,
@@ -63,7 +64,7 @@ final class HybridSearchSql {
                 FROM filtered f
                 JOIN section_texts st ON st.section_key = COALESCE(f.section_id, f.id)
             )
-            SELECT id, document_id, filename, title, section_id, section_path, section_text, snippet,
+            SELECT id, document_id, filename, title, section_id, section_path, text, section_text, snippet,
                    municipality, plan_type, keyword_score, vector_score, hybrid_score
             FROM ranked
             ORDER BY hybrid_score DESC NULLS LAST, id ASC

@@ -54,7 +54,7 @@ public class JdbcHybridSearchService implements DocumentSearchService {
                         d.title,
                         c.section_id,
                         s.section_path,
-                        c.text,
+                        c.text AS text,
                         substring(c.text FROM 1 FOR 240) AS snippet,
                         c.municipality,
                         c.plan_type
@@ -75,6 +75,7 @@ public class JdbcHybridSearchService implements DocumentSearchService {
                     f.title,
                     f.section_id,
                     f.section_path,
+                    f.text,
                     st.section_text,
                     f.snippet,
                     f.municipality,
@@ -83,7 +84,7 @@ public class JdbcHybridSearchService implements DocumentSearchService {
                     NULL::double precision AS vector_score,
                     NULL::double precision AS hybrid_score
                 FROM filtered f
-                JOIN section_texts st ON st.section_key = COALESCE(f.section_id, f.id)
+                    JOIN section_texts st ON st.section_key = COALESCE(f.section_id, f.id)
                 ORDER BY f.id ASC
                 """;
         return jdbcClient.sql(sql)
