@@ -3,7 +3,10 @@
 @if(results.isEmpty()) {
     <p>Keine Treffer gefunden.</p>
 @endif
-@for(ch.so.arp.rag.chat.DocumentChunk chunk : results) 
+@if(!results.isEmpty()) {
+    <button type="button" data-select-all>Alle Abschnitte auswählen</button>
+}
+@for(ch.so.arp.rag.chat.DocumentChunk chunk : results)
     <div class="result-card">
         <label>
             <input type="checkbox" name="selection" value="${chunk.id()}">

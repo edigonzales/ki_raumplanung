@@ -20,6 +20,9 @@
         <form hx-post="/search" hx-target="#search-results" hx-swap="innerHTML">
             <label for="keywords">Stichworte</label><br>
             <input type="text" id="keywords" name="keywords" required><br>
+            <label for="lexicalWeight">Lexikalisches Gewicht (0 = semantisch, 1 = lexikalisch):</label><br>
+            <input type="range" id="lexicalWeight" name="lexicalWeight" min="0" max="1" step="0.05" value="0.5">
+            <span id="lexicalWeightValue">0.5</span><br>
             <button type="submit">Suchen</button>
         </form>
         <div id="search-results">
@@ -39,5 +42,34 @@
         </div>
     </div>
 </div>
+<script>
+    const lexicalWeight = document.getElementById('lexicalWeight');
+    const lexicalWeightValue = document.getElementById('lexicalWeightValue');
+
+    if (lexicalWeight && lexicalWeightValue) {
+        const updateLexicalLabel = (value) => {
+            lexicalWeightValue.textContent = Number(value).toFixed(2);
+        };
+
+        lexicalWeight.addEventListener('input', (event) => {
+            updateLexicalLabel(event.target.value);
+        });
+
+        updateLexicalLabel(lexicalWeight.value);
+    }
+
+    const searchResults = document.getElementById('search-results');
+    if (searchResults) {
+        searchResults.addEventListener('click', (event) => {
+            const target = event.target;
+            if (target && target.matches('[data-select-all]')) {
+                const checkboxes = searchResults.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach((checkbox) => {
+                    checkbox.checked = true;
+                });
+            }
+        });
+    }
+</script>
 </body>
 </html>
