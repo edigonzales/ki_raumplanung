@@ -56,6 +56,10 @@ public record DocumentResult(
         return documents;
     }
 
+    /**
+     * Groups all chunks belonging to the same section, orders them in document order,
+     * and builds the SectionResult list with aggregated scores and text content.
+     */
     private static List<SectionResult> buildSections(List<DocumentChunk> documentChunks) {
         record SectionKey(Long id, String path) {
         }
@@ -85,6 +89,9 @@ public record DocumentResult(
         return sections;
     }
 
+    /**
+     * Returns the highest hybrid_score value among the given chunks, or null when none exists.
+     */
     private static Double highestHybridScore(List<DocumentChunk> chunks) {
         return chunks.stream()
                 .map(DocumentChunk::hybridScore)
@@ -93,6 +100,10 @@ public record DocumentResult(
                 .orElse(null);
     }
 
+    /**
+     * Reconstructs a section's text by merging ordered chunk text when possible, otherwise
+     * falling back to stored section text or snippets.
+     */
     private static String resolveSectionText(List<DocumentChunk> sectionChunks) {
         Optional<String> mergedFromChunks = mergeChunkTexts(sectionChunks);
         return mergedFromChunks
@@ -109,6 +120,10 @@ public record DocumentResult(
                                 .collect(Collectors.joining(" "))));
     }
 
+    /**
+     * Normalizes whitespace on chunk texts and merges them while trimming overlapping
+     * boundaries so the reconstructed section reads without duplicate phrases.
+     */
     private static Optional<String> mergeChunkTexts(List<DocumentChunk> sectionChunks) {
         List<String> chunkTexts = sectionChunks.stream()
                 .map(DocumentChunk::text)
@@ -134,15 +149,25 @@ public record DocumentResult(
         return Optional.of(merged.toString());
     }
 
+    /**
+     * Strips leading/trailing whitespace and collapses internal whitespace to a single space.
+     */
     private static String normalizeWhitespace(String text) {
         return text.strip().replaceAll("\\s+", " ");
     }
 
+    /**
+     * Determines whether a space is needed between two chunks when no overlap is found.
+     */
     private static boolean needsPadding(StringBuilder merged, String current) {
         return !merged.isEmpty() && !Character.isWhitespace(merged.charAt(merged.length() - 1))
                 && !current.isEmpty() && !Character.isWhitespace(current.charAt(0));
     }
 
+    /**
+     * Finds the longest case-insensitive overlap (minimum length 8) between the tail of the
+     * merged text and the head of the current chunk text.
+     */
     private static int findCharacterOverlap(StringBuilder merged, String current) {
         int maxOverlap = Math.min(merged.length(), current.length());
         final int minOverlap = 8;
@@ -158,6 +183,9 @@ public record DocumentResult(
         return 0;
     }
 
+    /**
+     * Performs a manual regionMatches comparison without allocations to support overlap detection.
+     */
     private static boolean regionMatchesIgnoreCase(CharSequence left, int leftStart, CharSequence right, int rightStart, int length) {
         for (int i = 0; i < length; i++) {
             char l = left.charAt(leftStart + i);
