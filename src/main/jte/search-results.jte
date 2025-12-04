@@ -1,8 +1,8 @@
 @param java.util.List<ch.so.arp.rag.chat.DocumentResult> results
 <h3>Gefundene Abschnitte</h3>
-@if(results.isEmpty()) {
+@if(results.isEmpty()) 
     <p>Keine Treffer gefunden.</p>
-@else {
+@else 
     <button type="button" data-select-all data-label-select="Alle Abschnitte auswählen"
             data-label-deselect="Alle Abschnitte abwählen" aria-pressed="false">Alle Abschnitte auswählen</button>
     @for(ch.so.arp.rag.chat.DocumentResult document : results)
@@ -13,7 +13,7 @@
                     <strong>${document.title()}</strong> (${document.filename()})
                 </label>
                 <div class="document-meta">
-                    @if(document.bestHybridScore() != null) {
+                    @if(document.bestHybridScore() != null) 
                         <small>Höchste Bewertung: ${String.format("%.2f", document.bestHybridScore())}</small>
                     @endif
                 </div>
@@ -30,7 +30,7 @@
                             <p>${section.sectionText()}</p>
                         </details>
                         <div class="chunk-selection-container">
-                            @for(Long chunkId : section.chunkIds()) {
+                            @for(Long chunkId : section.chunkIds()) 
                                 <input type="checkbox" class="chunk-selection" name="selection" value="${chunkId}" hidden>
                             @endfor
                         </div>
