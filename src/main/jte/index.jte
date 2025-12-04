@@ -24,6 +24,44 @@
         <form hx-post="/search" hx-target="#search-results" hx-swap="innerHTML">
             <label for="keywords">Stichworte</label><br>
             <input type="text" id="keywords" name="keywords" required><br>
+            <label for="gemeinde">Gemeinde</label><br>
+            <select id="gemeinde" name="gemeinde">
+                <option value=""></option>
+                <option value="Balsthal">Balsthal</option>
+                <option value="Bellach">Bellach</option>
+                <option value="Biberist">Biberist</option>
+                <option value="Deitingen">Deitingen</option>
+                <option value="Dornach">Dornach</option>
+                <option value="Dulliken">Dulliken</option>
+                <option value="Erlinsbach">Erlinsbach</option>
+                <option value="Gerlafingen">Gerlafingen</option>
+                <option value="Gretzenbach">Gretzenbach</option>
+                <option value="Härkingen">Härkingen</option>
+                <option value="Himmelried">Himmelried</option>
+                <option value="Kappel">Kappel</option>
+                <option value="Langendorf">Langendorf</option>
+                <option value="Lüsslingen-Nennigkofen">Lüsslingen-Nennigkofen</option>
+                <option value="Niedergösgen">Niedergösgen</option>
+                <option value="Oberbuchsiten">Oberbuchsiten</option>
+                <option value="Oensingen">Oensingen</option>
+                <option value="Olten">Olten</option>
+                <option value="Recherswil">Recherswil</option>
+                <option value="Riedholz">Riedholz</option>
+                <option value="Rohr">Rohr</option>
+                <option value="Schönenwerd">Schönenwerd</option>
+                <option value="Selzach">Selzach</option>
+                <option value="Solothurn">Solothurn</option>
+                <option value="Starrkirch-Wil">Starrkirch-Wil</option>
+                <option value="Stüsslingen">Stüsslingen</option>
+                <option value="Trimbach">Trimbach</option>
+                <option value="Zuchwil">Zuchwil</option>
+            </select><br>
+            <label for="planungsinstrument">Planungsinstrument</label><br>
+            <select id="planungsinstrument" name="planungsinstrument">
+                <option value=""></option>
+                <option value="gestaltungsplan">gestaltungsplan</option>
+                <option value="ortsplanung">ortsplanung</option>
+            </select><br>
             <label for="lexicalWeight">Lexikalisches Gewicht (0 = semantisch, 1 = lexikalisch):</label><br>
             <input type="range" id="lexicalWeight" name="lexicalWeight" min="0" max="1" step="0.05" value="0.6">
             <span id="lexicalWeightValue">0.60</span><br>
