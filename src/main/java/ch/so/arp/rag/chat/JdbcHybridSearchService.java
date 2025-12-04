@@ -21,12 +21,12 @@ public class JdbcHybridSearchService implements DocumentSearchService {
     }
 
     @Override
-    public List<DocumentResult> search(String keywords, double lexicalWeight) {
+    public List<DocumentResult> search(String keywords, double lexicalWeight, String municipality, String planType) {
         if (!StringUtils.hasText(keywords)) {
             return Collections.emptyList();
         }
 
-        SqlParameterSource params = buildSearchParams(keywords, lexicalWeight);
+        SqlParameterSource params = buildSearchParams(keywords, lexicalWeight, municipality, planType);
         
         List<DocumentChunk> chunks = jdbcClient.sql(HybridSearchSql.HYBRID_SEARCH_SQL)
                 .paramSource(params)
@@ -98,7 +98,7 @@ public class JdbcHybridSearchService implements DocumentSearchService {
         return HybridSearchSql.HYBRID_SEARCH_SQL;
     }
 
-    MapSqlParameterSource buildSearchParams(String keywords, double lexicalWeight) {
+    MapSqlParameterSource buildSearchParams(String keywords, double lexicalWeight, String municipality, String planType) {
         String normalizedKeywords = normalizeKeywords(keywords);
         return new MapSqlParameterSource()
                 .addValue("keywords", normalizedKeywords)
@@ -106,9 +106,13 @@ public class JdbcHybridSearchService implements DocumentSearchService {
                         "embedding",
                         embeddingService.embed(buildEmbeddingInput(keywords)).map(this::toHalfvecLiteral).orElse(null))
                 .addValue("lexical_weight", normalizeLexicalWeight(lexicalWeight))
-                .addValue("municipality", null)
-                .addValue("plan_type", null)
+                .addValue("municipality", normalizeFilter(municipality))
+                .addValue("plan_type", normalizeFilter(planType))
                 .addValue("limit", 20);
+    }
+
+    private String normalizeFilter(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
     }
 
     double normalizeLexicalWeight(double lexicalWeight) {

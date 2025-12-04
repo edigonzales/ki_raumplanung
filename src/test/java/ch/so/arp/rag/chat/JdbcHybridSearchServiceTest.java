@@ -30,7 +30,7 @@ class JdbcHybridSearchServiceTest {
                 .thenReturn(List.of());
 
         JdbcHybridSearchService service = new JdbcHybridSearchService(JdbcClient.create(operations), embeddingService);
-        service.search("hello", 0.6);
+        service.search("hello", 0.6, null, null);
 
         ArgumentCaptor<MapSqlParameterSource> params = ArgumentCaptor.forClass(MapSqlParameterSource.class);
         verify(operations).query(eq(HybridSearchSql.HYBRID_SEARCH_SQL), params.capture(), any(RowMapper.class));
@@ -48,7 +48,7 @@ class JdbcHybridSearchServiceTest {
                 .thenReturn(List.of());
 
         JdbcHybridSearchService service = new JdbcHybridSearchService(JdbcClient.create(operations), embeddingService);
-        service.search(" Hecke , Baulinien ", 0.75);
+        service.search(" Hecke , Baulinien ", 0.75, " Solothurn ", "gestaltungsplan");
 
         ArgumentCaptor<MapSqlParameterSource> params = ArgumentCaptor.forClass(MapSqlParameterSource.class);
         verify(operations).query(eq(HybridSearchSql.HYBRID_SEARCH_SQL), params.capture(), any(RowMapper.class));
@@ -56,6 +56,8 @@ class JdbcHybridSearchServiceTest {
 
         assertThat(params.getValue().getValue("keywords")).isEqualTo("Hecke OR Baulinien");
         assertThat(params.getValue().getValue("lexical_weight")).isEqualTo(0.75d);
+        assertThat(params.getValue().getValue("municipality")).isEqualTo("Solothurn");
+        assertThat(params.getValue().getValue("plan_type")).isEqualTo("gestaltungsplan");
     }
 
     @Test
@@ -67,12 +69,14 @@ class JdbcHybridSearchServiceTest {
                 .thenReturn(List.of());
 
         JdbcHybridSearchService service = new JdbcHybridSearchService(JdbcClient.create(operations), embeddingService);
-        service.search("hello", 0.25);
+        service.search("hello", 0.25, "", " ");
 
         ArgumentCaptor<MapSqlParameterSource> params = ArgumentCaptor.forClass(MapSqlParameterSource.class);
         verify(operations).query(eq(HybridSearchSql.HYBRID_SEARCH_SQL), params.capture(), any(RowMapper.class));
 
         assertThat(params.getValue().getValue("embedding")).isNull();
         assertThat(params.getValue().getValue("lexical_weight")).isEqualTo(0.25d);
+        assertThat(params.getValue().getValue("municipality")).isNull();
+        assertThat(params.getValue().getValue("plan_type")).isNull();
     }
 }
