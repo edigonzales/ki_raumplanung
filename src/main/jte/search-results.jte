@@ -10,7 +10,7 @@
             <div class="document-header">
                 <label>
                     <input type="checkbox" data-document-toggle aria-label="Dokument auswählen"
-                           id="document-${document.documentId()}">
+                           id="document-${document.documentId().toString()}">
                     <strong>${document.title()}</strong> (${document.filename()})
                 </label>
                 <div class="document-meta">
