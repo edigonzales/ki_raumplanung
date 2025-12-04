@@ -108,7 +108,7 @@ public class JdbcHybridSearchService implements DocumentSearchService {
                 .addValue("lexical_weight", normalizeLexicalWeight(lexicalWeight))
                 .addValue("municipality", normalizeFilter(municipality))
                 .addValue("plan_type", normalizeFilter(planType))
-                .addValue("limit", 20);
+                .addValue("limit", 2000);
     }
 
     private String normalizeFilter(String value) {
