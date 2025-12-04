@@ -108,6 +108,23 @@
             });
         };
 
+        const setSectionSelection = (sectionCard, checked) => {
+            setChunkSelection(sectionCard, checked);
+            updateSectionState(sectionCard);
+        };
+
+        const setDocumentSelection = (documentCard, checked) => {
+            documentCard.querySelectorAll('[data-section-card]').forEach((sectionCard) => {
+                setSectionSelection(sectionCard, checked);
+            });
+            const documentToggle = documentCard.querySelector('[data-document-toggle]');
+            if (documentToggle) {
+                documentToggle.checked = checked;
+                documentToggle.indeterminate = false;
+            }
+            updateDocumentState(documentCard);
+        };
+
         const updateSectionState = (sectionCard) => {
             const sectionToggle = sectionCard.querySelector('[data-section-toggle]');
             const chunkCheckboxes = Array.from(sectionCard.querySelectorAll('.chunk-selection'));
@@ -141,15 +158,14 @@
         searchResults.addEventListener('click', (event) => {
             const target = event.target;
             if (target && target.matches('[data-select-all]')) {
-                const chunkCheckboxes = searchResults.querySelectorAll('.chunk-selection');
-                const allSelected = Array.from(chunkCheckboxes).every((checkbox) => checkbox.checked);
+                const documentCards = Array.from(searchResults.querySelectorAll('[data-document-card]'));
+                const allSelected = documentCards.every((card) => {
+                    const documentToggle = card.querySelector('[data-document-toggle]');
+                    return documentToggle ? documentToggle.checked : false;
+                });
                 const newState = !allSelected;
 
-                chunkCheckboxes.forEach((checkbox) => {
-                    checkbox.checked = newState;
-                });
-
-                refreshDocumentStates();
+                documentCards.forEach((card) => setDocumentSelection(card, newState));
 
                 const selectLabel = target.dataset.labelSelect || 'Alle Abschnitte auswählen';
                 const deselectLabel = target.dataset.labelDeselect || 'Alle Abschnitte abwählen';
@@ -165,11 +181,7 @@
                 if (!documentCard) {
                     return;
                 }
-                documentCard.querySelectorAll('[data-section-card]').forEach((sectionCard) => {
-                    setChunkSelection(sectionCard, target.checked);
-                    updateSectionState(sectionCard);
-                });
-                updateDocumentState(documentCard);
+                setDocumentSelection(documentCard, target.checked);
             }
 
             if (target && target.matches('[data-section-toggle]')) {
@@ -177,8 +189,7 @@
                 if (!sectionCard) {
                     return;
                 }
-                setChunkSelection(sectionCard, target.checked);
-                updateSectionState(sectionCard);
+                setSectionSelection(sectionCard, target.checked);
                 const documentCard = sectionCard.closest('[data-document-card]');
                 if (documentCard) {
                     updateDocumentState(documentCard);

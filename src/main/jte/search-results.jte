@@ -22,7 +22,8 @@
                 @for(ch.so.arp.rag.chat.SectionResult section : document.sections())
                     <div class="section-card" data-section-card>
                         <label>
-                            <input type="checkbox" data-section-toggle aria-label="Abschnitt auswählen">
+                            <input type="checkbox" data-section-toggle aria-label="Abschnitt auswählen"
+                                   id="section-${section.sectionId()}" data-section-id="${section.sectionId()}">
                             <strong>${section.sectionPath() != null ? section.sectionPath() : "Abschnitt"}</strong>
                         </label>
                         <details>
