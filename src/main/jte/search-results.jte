@@ -9,7 +9,8 @@
         <div class="result-card" data-document-card>
             <div class="document-header">
                 <label>
-                    <input type="checkbox" data-document-toggle aria-label="Dokument auswählen">
+                    <input type="checkbox" data-document-toggle aria-label="Dokument auswählen"
+                           id="document-${document.documentId()}">
                     <strong>${document.title()}</strong> (${document.filename()})
                 </label>
                 <div class="document-meta">

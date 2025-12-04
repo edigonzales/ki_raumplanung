@@ -158,14 +158,12 @@
         searchResults.addEventListener('click', (event) => {
             const target = event.target;
             if (target && target.matches('[data-select-all]')) {
-                const documentCards = Array.from(searchResults.querySelectorAll('[data-document-card]'));
-                const allSelected = documentCards.every((card) => {
-                    const documentToggle = card.querySelector('[data-document-toggle]');
-                    return documentToggle ? documentToggle.checked : false;
-                });
-                const newState = !allSelected;
+                const sectionCards = Array.from(searchResults.querySelectorAll('[data-section-card]'));
+                const sectionToggles = Array.from(searchResults.querySelectorAll('[data-section-toggle]'));
+                const allSectionsSelected = sectionToggles.length > 0 && sectionToggles.every((toggle) => toggle.checked);
+                const newState = !allSectionsSelected;
 
-                documentCards.forEach((card) => setDocumentSelection(card, newState));
+                sectionCards.forEach((card) => setSectionSelection(card, newState));
 
                 const selectLabel = target.dataset.labelSelect || 'Alle Abschnitte auswählen';
                 const deselectLabel = target.dataset.labelDeselect || 'Alle Abschnitte abwählen';
