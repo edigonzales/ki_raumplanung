@@ -31,7 +31,10 @@ public class ChatPageController {
 
     @PostMapping("/search")
     public String search(@ModelAttribute @Validated SearchRequest request, Model model) {
-        model.addAttribute("results", searchService.search(request.keywords(), request.lexicalWeight()));
+        model.addAttribute(
+                "results",
+                searchService.search(
+                        request.keywords(), request.lexicalWeight(), request.municipality(), request.planType()));
         return "search-results";
     }
 

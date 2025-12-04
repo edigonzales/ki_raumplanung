@@ -25,7 +25,7 @@
             <label for="keywords">Stichworte</label><br>
             <input type="text" id="keywords" name="keywords" required><br>
             <label for="gemeinde">Gemeinde</label><br>
-            <select id="gemeinde" name="gemeinde">
+            <select id="gemeinde" name="municipality">
                 <option value=""></option>
                 <option value="Balsthal">Balsthal</option>
                 <option value="Bellach">Bellach</option>
@@ -57,7 +57,7 @@
                 <option value="Zuchwil">Zuchwil</option>
             </select><br>
             <label for="planungsinstrument">Planungsinstrument</label><br>
-            <select id="planungsinstrument" name="planungsinstrument">
+            <select id="planungsinstrument" name="plan_type">
                 <option value=""></option>
                 <option value="gestaltungsplan">gestaltungsplan</option>
                 <option value="ortsplanung">ortsplanung</option>

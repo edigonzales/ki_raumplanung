@@ -23,7 +23,7 @@ public class MockHybridSearchService implements DocumentSearchService {
     }
 
     @Override
-    public List<DocumentResult> search(String keywords, double lexicalWeight) {
+    public List<DocumentResult> search(String keywords, double lexicalWeight, String municipality, String planType) {
         if (!StringUtils.hasText(keywords)) {
             return Collections.emptyList();
         }
@@ -31,6 +31,12 @@ public class MockHybridSearchService implements DocumentSearchService {
         String normalized = keywords.toLowerCase(Locale.ROOT);
         List<DocumentChunk> matches = new ArrayList<>();
         for (DocumentChunk chunk : indexedChunks.values()) {
+            if (!matchesFilter(chunk.municipality(), municipality)) {
+                continue;
+            }
+            if (!matchesFilter(chunk.planType(), planType)) {
+                continue;
+            }
             String haystack = (chunk.title() + " " + chunk.sectionPath() + " " + chunk.snippet()).toLowerCase(Locale.ROOT);
             double keywordScore = haystack.contains(normalized) ? 1.0d : 0.0d;
             double vectorScore = mockVectorScore(haystack, normalized);
@@ -165,5 +171,12 @@ public class MockHybridSearchService implements DocumentSearchService {
             return 1.0d;
         }
         return lexicalWeight;
+    }
+
+    private boolean matchesFilter(String value, String filter) {
+        if (!StringUtils.hasText(filter)) {
+            return true;
+        }
+        return value != null && value.equalsIgnoreCase(filter.trim());
     }
 }
