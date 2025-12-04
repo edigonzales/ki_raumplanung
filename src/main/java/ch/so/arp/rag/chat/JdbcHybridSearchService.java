@@ -2,7 +2,6 @@ package ch.so.arp.rag.chat;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.jdbc.core.DataClassRowMapper;
@@ -22,7 +21,7 @@ public class JdbcHybridSearchService implements DocumentSearchService {
     }
 
     @Override
-    public List<DocumentChunk> search(String keywords, double lexicalWeight) {
+    public List<DocumentResult> search(String keywords, double lexicalWeight) {
         if (!StringUtils.hasText(keywords)) {
             return Collections.emptyList();
         }
@@ -38,7 +37,7 @@ public class JdbcHybridSearchService implements DocumentSearchService {
 //            System.out.println(chunk.filename() + " --- " + chunk.hybridScore() + " --- " + chunk.keywordScore() + " --- " + chunk.vectorScore());
 //        }
         
-        return chunks;
+        return DocumentResult.fromChunks(chunks);
     }
 
     @Override
@@ -47,14 +46,46 @@ public class JdbcHybridSearchService implements DocumentSearchService {
             return Collections.emptyList();
         }
         String sql = """
-                SELECT c.id, c.document_id, d.filename, d.title, s.section_path,
-                       substring(c.text FROM 1 FOR 240) AS snippet,
-                       c.municipality, c.plan_type, NULL::double precision AS hybrid_score
-                FROM arp_rag_vp.chunks c
-                JOIN arp_rag_vp.documents d ON d.id = c.document_id
-                LEFT JOIN arp_rag_vp.sections s ON s.id = c.section_id
-                WHERE c.id IN (:ids)
-                ORDER BY c.id ASC
+                WITH filtered AS (
+                    SELECT
+                        c.id,
+                        c.document_id,
+                        d.filename,
+                        d.title,
+                        c.section_id,
+                        s.section_path,
+                        c.text AS text,
+                        substring(c.text FROM 1 FOR 240) AS snippet,
+                        c.municipality,
+                        c.plan_type
+                    FROM arp_rag_vp.chunks c
+                    JOIN arp_rag_vp.documents d ON d.id = c.document_id
+                    LEFT JOIN arp_rag_vp.sections s ON s.id = c.section_id
+                    WHERE c.id IN (:ids)
+                ), section_texts AS (
+                    SELECT COALESCE(section_id, id) AS section_key,
+                           string_agg(text, ' ' ORDER BY id) AS section_text
+                    FROM filtered
+                    GROUP BY COALESCE(section_id, id)
+                )
+                SELECT
+                    f.id,
+                    f.document_id,
+                    f.filename,
+                    f.title,
+                    f.section_id,
+                    f.section_path,
+                    f.text,
+                    st.section_text,
+                    f.snippet,
+                    f.municipality,
+                    f.plan_type,
+                    NULL::double precision AS keyword_score,
+                    NULL::double precision AS vector_score,
+                    NULL::double precision AS hybrid_score
+                FROM filtered f
+                    JOIN section_texts st ON st.section_key = COALESCE(f.section_id, f.id)
+                ORDER BY f.id ASC
                 """;
         return jdbcClient.sql(sql)
                 .param("ids", ids)

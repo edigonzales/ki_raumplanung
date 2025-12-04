@@ -15,13 +15,15 @@ final class HybridSearchSql {
                     GREATEST(LEAST(COALESCE(:lexical_weight, 0.6), 1.0), 0.0) AS lexical_weight,
                     1 - GREATEST(LEAST(COALESCE(:lexical_weight, 0.6), 1.0), 0.0) AS vector_weight,
                     COALESCE(:limit, 20)                           AS alimit
-            ), ranked AS (
+            ), filtered AS (
                 SELECT
                     c.id,
                     c.document_id,
                     d.filename,
                     d.title,
+                    c.section_id,
                     s.section_path,
+                    c.text,
                     substring(c.text FROM 1 FOR 240) AS snippet,
                     c.municipality,
                     c.plan_type,
@@ -38,8 +40,31 @@ final class HybridSearchSql {
                     )
                   AND (p.municipality IS NULL OR c.municipality = p.municipality)
                   AND (p.plan_type IS NULL OR c.plan_type = p.plan_type)
+            ), section_texts AS (
+                SELECT COALESCE(section_id, id) AS section_key,
+                       string_agg(text, ' ' ORDER BY id) AS section_text
+                FROM filtered
+                GROUP BY COALESCE(section_id, id)
+            ), ranked AS (
+                SELECT
+                    f.id,
+                    f.document_id,
+                    f.filename,
+                    f.title,
+                    f.section_id,
+                    f.section_path,
+                    f.text,
+                    st.section_text,
+                    f.snippet,
+                    f.municipality,
+                    f.plan_type,
+                    f.keyword_score,
+                    f.vector_score,
+                    f.hybrid_score
+                FROM filtered f
+                JOIN section_texts st ON st.section_key = COALESCE(f.section_id, f.id)
             )
-            SELECT id, document_id, filename, title, section_path, snippet,
+            SELECT id, document_id, filename, title, section_id, section_path, text, section_text, snippet,
                    municipality, plan_type, keyword_score, vector_score, hybrid_score
             FROM ranked
             ORDER BY hybrid_score DESC NULLS LAST, id ASC

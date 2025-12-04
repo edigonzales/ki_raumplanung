@@ -23,7 +23,7 @@ public class MockHybridSearchService implements DocumentSearchService {
     }
 
     @Override
-    public List<DocumentChunk> search(String keywords, double lexicalWeight) {
+    public List<DocumentResult> search(String keywords, double lexicalWeight) {
         if (!StringUtils.hasText(keywords)) {
             return Collections.emptyList();
         }
@@ -39,7 +39,7 @@ public class MockHybridSearchService implements DocumentSearchService {
             }
         }
 
-        return matches.stream().sorted(Comparator.comparing(DocumentChunk::id)).toList();
+        return DocumentResult.fromChunks(matches.stream().sorted(Comparator.comparing(DocumentChunk::id)).toList());
     }
 
     @Override
@@ -112,7 +112,21 @@ public class MockHybridSearchService implements DocumentSearchService {
             Double hybridScore) {
         indexedChunks.put(
                 id,
-                new DocumentChunk(id, documentId, filename, title, path, snippet, municipality, planType, hybridScore, hybridScore, hybridScore));
+                new DocumentChunk(
+                        id,
+                        documentId,
+                        filename,
+                        title,
+                        (long) id,
+                        path,
+                        snippet,
+                        snippet,
+                        snippet,
+                        municipality,
+                        planType,
+                        hybridScore,
+                        hybridScore,
+                        hybridScore));
     }
 
     private double mockVectorScore(String haystack, String needle) {
@@ -128,7 +142,10 @@ public class MockHybridSearchService implements DocumentSearchService {
                 chunk.documentId(),
                 chunk.filename(),
                 chunk.title(),
+                chunk.sectionId(),
                 chunk.sectionPath(),
+                chunk.text(),
+                chunk.sectionText(),
                 chunk.snippet(),
                 chunk.municipality(),
                 chunk.planType(),
