@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <title>RAG Assistent</title>
     <script src="https://unpkg.com/htmx.org@2.0.8"></script>
-    <script src="https://unpkg.com/htmx.org@2.0.8/dist/ext/sse.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.4/sse.min.js"></script>
     <style>
         .layout { display: flex; gap: 1rem; align-items: flex-start; }
         .column { flex: 1; }
@@ -75,9 +75,9 @@
     </div>
     <div class="column">
         <h2>Schritt 2: Kontext wählen und Aufgabe stellen</h2>
-        <form hx-post="/summary" hx-target="#summary-panel" hx-swap="innerHTML">
+        <form hx-post="/task" hx-target="#task-panel" hx-swap="innerHTML">
             <label for="prompt">Aufgabe</label><br>
-            <textarea id="prompt" name="prompt" rows="4" cols="50" required>Fasse die ausgewählten Abschnitte zusammen.</textarea><br>
+            <textarea id="prompt" name="prompt" rows="4" cols="50" required>Fasse die ausgewählten Abschnitte zum Thema [THEMA] in [Gestaltungsplänen] zusammen.</textarea><br>
             <div class="full-document-toggle">
                 <label>
                     <input type="checkbox" id="useFullDocuments" name="useFullDocuments">
@@ -86,7 +86,7 @@
             </div>
             <button type="submit">Antwort generieren</button>
         </form>
-        <div id="summary-panel">
+        <div id="task-panel">
             <p>Wähle zunächst Abschnitte aus der Suche.</p>
         </div>
     </div>
@@ -213,9 +213,9 @@
             }
         });
 
-        const summaryForm = document.querySelector('form[hx-post="/summary"]');
-        if (summaryForm) {
-            summaryForm.addEventListener('htmx:configRequest', (event) => {
+        const taskForm = document.querySelector('form[hx-post="/task"]');
+        if (taskForm) {
+            taskForm.addEventListener('htmx:configRequest', (event) => {
                 const sectionToggles = Array.from(searchResults.querySelectorAll('[data-section-toggle]:checked'));
 
                 const sectionIds = sectionToggles

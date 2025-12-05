@@ -7,7 +7,8 @@ import org.springframework.ui.ExtendedModelMap;
 
 class ChatPageControllerTest {
 
-    private final ChatPageController controller = new ChatPageController(new MockHybridSearchService());
+    private final ChatPageController controller =
+            new ChatPageController(new MockHybridSearchService(), new TaskContextStore());
 
     @Test
     void shouldReturnIndexView() {

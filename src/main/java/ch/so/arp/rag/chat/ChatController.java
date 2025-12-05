@@ -27,12 +27,12 @@ public class ChatController {
         this.chatService = chatService;
     }
 
-    @GetMapping("/summary-stream")
-    public SseEmitter streamSummary(@Valid @ModelAttribute SummaryStreamRequest request) {
+    @GetMapping("/task-stream")
+    public SseEmitter streamTask(@Valid @ModelAttribute TaskStreamRequest request) {
         LOGGER.info(
-                "Starting summary stream for {} sections across {} documents",
+                "Starting task stream for {} sections across {} documents",
                 request.sectionIds().size(),
                 request.documentIds().size());
-        return chatService.streamSummary(request);
+        return chatService.streamTask(request);
     }
 }

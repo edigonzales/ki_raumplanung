@@ -1,10 +1,10 @@
 @param String streamUrl
 @param java.util.List<ch.so.arp.rag.chat.SectionSelection> selection
 @param String prompt
-@if(streamUrl == null || streamUrl.isBlank()) 
+@if(streamUrl == null || streamUrl.isBlank())
     <p>Bitte wähle mindestens einen Abschnitt aus.</p>
-@else 
-    <div hx-ext="sse" sse-connect="${streamUrl}">
+@else
+    <div hx-ext="sse" sse-connect="${streamUrl}" sse-close="close">
         <p>Aufgabe: ${prompt}</p>
         <p>Kontext: ${selection.size()} ${selection.stream().allMatch(selected -> selected.sectionId() == null) ? "Dokumente" : "Abschnitte"}</p>
         <ul>
@@ -15,7 +15,7 @@
                 </li>
             @endfor
         </ul>
-        <div id="summary-output" sse-swap="message">
+        <div id="task-output" sse-swap="message">
             <p>Antwort wird geladen...</p>
         </div>
     </div>

@@ -4,5 +4,5 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 public interface ChatService {
 
-    SseEmitter streamSummary(SummaryStreamRequest request);
+    SseEmitter streamTask(TaskStreamRequest request);
 }

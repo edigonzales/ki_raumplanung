@@ -4,7 +4,7 @@ import java.util.List;
 
 import jakarta.validation.constraints.NotBlank;
 
-public record SummaryForm(
+public record TaskForm(
         @NotBlank String prompt,
         List<Long> sectionIds,
         boolean useFullDocuments) {

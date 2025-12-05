@@ -3,13 +3,15 @@ package ch.so.arp.rag.chat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,10 +23,13 @@ import org.springframework.test.web.servlet.MvcResult;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-class ChatFlowTests {
+class TaskFlowTests {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private TaskContextStore contextStore;
 
     @Test
     void searchReturnsResults() throws Exception {
@@ -38,10 +43,10 @@ class ChatFlowTests {
     }
 
     @Test
-    void summaryPanelRendersSseConnect() throws Exception {
-        mockMvc.perform(post("/summary")
+    void taskPanelRendersSseConnect() throws Exception {
+        mockMvc.perform(post("/task")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                        .param("prompt", "Bitte zusammenfassen")
+                        .param("prompt", "Bitte beantworten")
                         .param("sectionIds", "1")
                         .param("useFullDocuments", "true"))
                 .andExpect(status().isOk())
@@ -50,11 +55,12 @@ class ChatFlowTests {
     }
 
     @Test
-    void streamSummaryEmitsEvents() throws Exception {
-        MvcResult result = mockMvc.perform(get("/api/chat/summary-stream")
+    void streamTaskEmitsEvents() throws Exception {
+        var contextToken = contextStore.store(List.of(new SectionSelection(null, "file.pdf", "Titel", 1L, "Abschnitt 1", "Text")));
+
+        MvcResult result = mockMvc.perform(get("/api/chat/task-stream")
                         .param("prompt", "Test")
-                        .param("sectionIds", "1", "2")
-                        .param("documentIds", "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222")
+                        .param("contextToken", contextToken.toString())
                         .accept(MediaType.TEXT_EVENT_STREAM))
                 .andExpect(request().asyncStarted())
                 .andReturn();
@@ -67,12 +73,12 @@ class ChatFlowTests {
                 .andReturn();
 
         String body = dispatched.getResponse().getContentAsString();
-        assertThat(body).contains("data:").contains("Zusammenfassung");
+        assertThat(body).contains("data:").contains("Aufgabe").contains("event:close");
     }
 
     @Test
-    void streamSummaryHandlesEmptyIdentifiers() throws Exception {
-        MvcResult result = mockMvc.perform(get("/api/chat/summary-stream")
+    void streamTaskHandlesEmptyIdentifiers() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/chat/task-stream")
                         .param("prompt", "Leere Auswahl")
                         .accept(MediaType.TEXT_EVENT_STREAM))
                 .andExpect(request().asyncStarted())
