@@ -14,6 +14,8 @@
         .section-card { border: 1px solid #ddd; padding: 0.5rem; margin-top: 0.5rem; background: #fafafa; }
         .section-card details { margin-top: 0.25rem; }
         .section-card summary { cursor: pointer; }
+        .full-document-toggle { display: flex; justify-content: flex-start; margin: 0.5rem 0; }
+        .full-document-toggle label { font-weight: 400; }
     </style>
 </head>
 <body>
@@ -76,6 +78,12 @@
         <form hx-post="/summary" hx-target="#summary-panel" hx-swap="innerHTML">
             <label for="prompt">Aufgabe</label><br>
             <textarea id="prompt" name="prompt" rows="4" cols="50" required>Fasse die ausgewählten Abschnitte zusammen.</textarea><br>
+            <div class="full-document-toggle">
+                <label>
+                    <input type="checkbox" id="useFullDocuments" name="useFullDocuments">
+                    Gesamte Dokument(e) verwenden
+                </label>
+            </div>
             <button type="submit">Antwort generieren</button>
         </form>
         <div id="summary-panel">
@@ -209,6 +217,7 @@
         if (summaryForm) {
             summaryForm.addEventListener('htmx:configRequest', (event) => {
                 const sectionToggles = Array.from(searchResults.querySelectorAll('[data-section-toggle]:checked'));
+
                 const sectionIds = sectionToggles
                         .map((toggle) => toggle.value)
                         .filter((value) => value && value.trim() !== '');
@@ -218,15 +227,14 @@
                     return;
                 }
 
-                const documentIds = Array.from(new Set(sectionToggles
-                        .map((toggle) => toggle.closest('[data-document-card]'))
-                        .filter((card) => card && card.dataset.documentId)
-                        .map((card) => card.dataset.documentId)));
+                const fullDocumentToggle = document.getElementById('useFullDocuments');
+
+                const useFullDocuments = fullDocumentToggle ? fullDocumentToggle.checked : false;
 
                 event.detail.parameters = {
                     ...event.detail.parameters,
                     sectionIds: sectionIds,
-                    documentIds: documentIds,
+                    useFullDocuments: useFullDocuments,
                 };
             });
         }

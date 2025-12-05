@@ -14,7 +14,7 @@
                     <strong>${document.title()}</strong> (${document.filename()})
                 </label>
                 <div class="document-meta">
-                    @if(document.bestHybridScore() != null) 
+                    @if(document.bestHybridScore() != null)
                         <small>Höchste Bewertung: ${String.format("%.2f", document.bestHybridScore())}</small>
                     @endif
                 </div>
