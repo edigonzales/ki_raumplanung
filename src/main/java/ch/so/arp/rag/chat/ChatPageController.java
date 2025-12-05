@@ -40,8 +40,8 @@ public class ChatPageController {
         return "search-results";
     }
 
-    @PostMapping("/summary")
-    public String summary(@ModelAttribute @Validated SummaryForm form, Model model, UriComponentsBuilder uriBuilder) {
+    @PostMapping("/task")
+    public String task(@ModelAttribute @Validated TaskForm form, Model model, UriComponentsBuilder uriBuilder) {
         List<Long> sectionIds = form.sectionIds() == null ? Collections.emptyList() : form.sectionIds();
 
         var selection = searchService.findBySectionSelections(sectionIds, form.useFullDocuments());
@@ -49,7 +49,7 @@ public class ChatPageController {
             model.addAttribute("streamUrl", "");
             model.addAttribute("selection", selection);
             model.addAttribute("prompt", form.prompt());
-            return "summary-panel";
+            return "task-panel";
         }
 
         List<Long> effectiveSectionIds = selection.stream()
@@ -65,7 +65,7 @@ public class ChatPageController {
                 .distinct()
                 .toList();
 
-        String streamUrl = uriBuilder.path("/api/chat/summary-stream")
+        String streamUrl = uriBuilder.path("/api/chat/task-stream")
                 .queryParam("prompt", form.prompt())
                 .queryParam("sectionIds", effectiveSectionIds)
                 .queryParam("documentIds", effectiveDocumentIds)
@@ -75,6 +75,6 @@ public class ChatPageController {
         model.addAttribute("streamUrl", streamUrl);
         model.addAttribute("selection", selection);
         model.addAttribute("prompt", form.prompt());
-        return "summary-panel";
+        return "task-panel";
     }
 }

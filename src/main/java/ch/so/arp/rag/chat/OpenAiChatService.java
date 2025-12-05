@@ -2,7 +2,6 @@ package ch.so.arp.rag.chat;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -17,23 +16,27 @@ public class OpenAiChatService implements ChatService {
     private static final Logger LOGGER = LoggerFactory.getLogger(OpenAiChatService.class);
 
     private final ChatClient chatClient;
+    private final DocumentSearchService searchService;
+    private final PromptFactory promptFactory;
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
-    public OpenAiChatService(ChatClient chatClient) {
+    public OpenAiChatService(ChatClient chatClient, DocumentSearchService searchService, PromptFactory promptFactory) {
         this.chatClient = chatClient;
+        this.searchService = searchService;
+        this.promptFactory = promptFactory;
     }
 
     @Override
-    public SseEmitter streamSummary(SummaryStreamRequest request) {
+    public SseEmitter streamTask(TaskStreamRequest request) {
         SseEmitter emitter = new SseEmitter(0L);
         executor.execute(() -> sendResponse(emitter, request));
         return emitter;
     }
 
-    private void sendResponse(SseEmitter emitter, SummaryStreamRequest request) {
+    private void sendResponse(SseEmitter emitter, TaskStreamRequest request) {
         try {
             String prompt = buildPrompt(request);
-            String content = chatClient.prompt().user(prompt).call().content();
+            String content = chatClient.prompt().system(promptFactory.buildSystemPromptWithoutUserQuestion(prompt)).user(request.prompt()).call().content();
             emitter.send(SseEmitter.event().name("message").data(content));
             emitter.complete();
         } catch (Exception e) {
@@ -47,21 +50,28 @@ public class OpenAiChatService implements ChatService {
         }
     }
 
-    private String buildPrompt(SummaryStreamRequest request) {
-        List<String> sections = request.sectionIds().stream()
-                .map(id -> "Abschnitt " + id)
-                .toList();
+    private String buildPrompt(TaskStreamRequest request) {
+        boolean useFullDocuments = !request.documentIds().isEmpty();
+        List<SectionSelection> selections = searchService.findBySectionSelections(request.sectionIds(), useFullDocuments);
 
-        String sectionLabel = sections.isEmpty() ? "keine ausgewählten Abschnitte" : String.join(", ", sections);
+        if (selections.isEmpty()) {
+            return "Kein Kontext verfügbar.";
+        }
 
-        String documentLabel = request.documentIds().isEmpty()
-                ? "keine ausgewählten Dokumente"
-                : request.documentIds().stream().map(UUID::toString).collect(Collectors.joining(", "));
-
-        return "Erstelle eine Zusammenfassung basierend auf folgenden Abschnitten: "
-                + sectionLabel
-                + " aus den Dokumenten: " + documentLabel
-                + ". Nutzeranfrage: " + request.prompt();
+        return selections.stream()
+                .map(selection -> formatSelection(selection, useFullDocuments))
+                .collect(Collectors.joining("\n\n"));
     }
 
+    private String formatSelection(SectionSelection selection, boolean useFullDocuments) {
+        String scopeLabel = useFullDocuments || selection.sectionId() == null
+                ? "Ganzes Dokument"
+                : selection.sectionPath();
+        String title = selection.title() != null ? selection.title() : "Unbenanntes Dokument";
+        String documentInfo = selection.filename() != null ? selection.filename() : "Datei unbekannt";
+        return "Titel: " + title
+                + " (" + documentInfo + ")\n"
+                + "Abschnitt: " + (scopeLabel == null ? "Unbekannt" : scopeLabel) + "\n"
+                + "Text:\n" + selection.text();
+    }
 }

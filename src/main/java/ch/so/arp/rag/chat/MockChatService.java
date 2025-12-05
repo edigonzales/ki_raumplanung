@@ -19,18 +19,18 @@ public class MockChatService implements ChatService {
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
     @Override
-    public SseEmitter streamSummary(SummaryStreamRequest request) {
+    public SseEmitter streamTask(TaskStreamRequest request) {
         SseEmitter emitter = new SseEmitter(0L);
         executor.execute(() -> sendMockResponse(emitter, request));
         return emitter;
     }
 
-    private void sendMockResponse(SseEmitter emitter, SummaryStreamRequest request) {
+    private void sendMockResponse(SseEmitter emitter, TaskStreamRequest request) {
         List<String> rows = request.sectionIds().stream()
                 .map(id -> "• Abschnitt " + id)
                 .toList();
 
-        String preamble = "Zusammenfassung für \"" + request.prompt() + "\"";
+        String preamble = "Aufgabe für \"" + request.prompt() + "\"";
         String details = rows.isEmpty() ? "Keine Abschnitte ausgewählt." : String.join("\n", rows);
         String closing = "Mock-Antwort basierend auf den ausgewählten Abschnitten.";
 
