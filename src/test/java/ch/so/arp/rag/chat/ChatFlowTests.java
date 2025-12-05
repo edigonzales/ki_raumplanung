@@ -42,7 +42,8 @@ class ChatFlowTests {
         mockMvc.perform(post("/summary")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("prompt", "Bitte zusammenfassen")
-                        .param("selection", "1"))
+                        .param("sectionIds", "1")
+                        .param("documentIds", "11111111-1111-1111-1111-111111111111"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("sse-connect")))
                 .andExpect(content().string(not(containsString("Bitte wähle mindestens einen Abschnitt"))));
@@ -52,7 +53,8 @@ class ChatFlowTests {
     void streamSummaryEmitsEvents() throws Exception {
         MvcResult result = mockMvc.perform(get("/api/chat/summary-stream")
                         .param("prompt", "Test")
-                        .param("selection", "1", "2")
+                        .param("sectionIds", "1", "2")
+                        .param("documentIds", "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222")
                         .accept(MediaType.TEXT_EVENT_STREAM))
                 .andExpect(request().asyncStarted())
                 .andReturn();
@@ -66,5 +68,24 @@ class ChatFlowTests {
 
         String body = dispatched.getResponse().getContentAsString();
         assertThat(body).contains("data:").contains("Zusammenfassung");
+    }
+
+    @Test
+    void streamSummaryHandlesEmptyIdentifiers() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/chat/summary-stream")
+                        .param("prompt", "Leere Auswahl")
+                        .accept(MediaType.TEXT_EVENT_STREAM))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        result.getAsyncResult(2000L);
+
+        MvcResult dispatched = mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", containsString("text/event-stream")))
+                .andReturn();
+
+        String body = dispatched.getResponse().getContentAsString();
+        assertThat(body).contains("Keine Abschnitte");
     }
 }

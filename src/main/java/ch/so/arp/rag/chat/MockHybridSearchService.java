@@ -49,11 +49,14 @@ public class MockHybridSearchService implements DocumentSearchService {
     }
 
     @Override
-    public List<DocumentChunk> findByIds(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
+    public List<DocumentChunk> findBySectionSelections(List<Long> sectionIds, List<UUID> documentIds) {
+        if (sectionIds == null || sectionIds.isEmpty() || documentIds == null || documentIds.isEmpty()) {
             return Collections.emptyList();
         }
-        return ids.stream().map(indexedChunks::get).filter(chunk -> chunk != null).toList();
+        return sectionIds.stream()
+                .map(indexedChunks::get)
+                .filter(chunk -> chunk != null && documentIds.contains(chunk.documentId()))
+                .toList();
     }
 
     @Override

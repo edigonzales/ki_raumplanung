@@ -1,6 +1,7 @@
 package ch.so.arp.rag.chat;
 
 import java.util.Collections;
+import java.util.List;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -40,7 +41,10 @@ public class ChatPageController {
 
     @PostMapping("/summary")
     public String summary(@ModelAttribute @Validated SummaryForm form, Model model, UriComponentsBuilder uriBuilder) {
-        var selection = searchService.findByIds(form.selection());
+        List<Long> sectionIds = form.sectionIds() == null ? Collections.emptyList() : form.sectionIds();
+        List<java.util.UUID> documentIds = form.documentIds() == null ? Collections.emptyList() : form.documentIds();
+
+        var selection = searchService.findBySectionSelections(sectionIds, documentIds);
         if (selection.isEmpty()) {
             model.addAttribute("streamUrl", "");
             model.addAttribute("selection", selection);
@@ -49,7 +53,8 @@ public class ChatPageController {
         }
         String streamUrl = uriBuilder.path("/api/chat/summary-stream")
                 .queryParam("prompt", form.prompt())
-                .queryParam("selection", form.selection())
+                .queryParam("sectionIds", sectionIds)
+                .queryParam("documentIds", documentIds)
                 .build()
                 .toUriString();
 

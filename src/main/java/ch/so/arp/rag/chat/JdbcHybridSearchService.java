@@ -3,6 +3,7 @@ package ch.so.arp.rag.chat;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.UUID;
 
 import org.springframework.jdbc.core.DataClassRowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -41,8 +42,8 @@ public class JdbcHybridSearchService implements DocumentSearchService {
     }
 
     @Override
-    public List<DocumentChunk> findByIds(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
+    public List<DocumentChunk> findBySectionSelections(List<Long> sectionIds, List<UUID> documentIds) {
+        if (sectionIds == null || sectionIds.isEmpty() || documentIds == null || documentIds.isEmpty()) {
             return Collections.emptyList();
         }
         String sql = """
@@ -61,7 +62,8 @@ public class JdbcHybridSearchService implements DocumentSearchService {
                     FROM arp_rag_vp.chunks c
                     JOIN arp_rag_vp.documents d ON d.id = c.document_id
                     LEFT JOIN arp_rag_vp.sections s ON s.id = c.section_id
-                    WHERE c.id IN (:ids)
+                    WHERE c.section_id IN (:sectionIds)
+                      AND c.document_id IN (:documentIds)
                 ), section_texts AS (
                     SELECT COALESCE(section_id, id) AS section_key,
                            string_agg(text, ' ' ORDER BY id) AS section_text
@@ -88,7 +90,8 @@ public class JdbcHybridSearchService implements DocumentSearchService {
                 ORDER BY f.id ASC
                 """;
         return jdbcClient.sql(sql)
-                .param("ids", ids)
+                .param("sectionIds", sectionIds)
+                .param("documentIds", documentIds)
                 .query(DataClassRowMapper.newInstance(DocumentChunk.class))
                 .list();
     }

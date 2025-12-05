@@ -29,7 +29,10 @@ public class ChatController {
 
     @GetMapping("/summary-stream")
     public SseEmitter streamSummary(@Valid @ModelAttribute SummaryStreamRequest request) {
-        LOGGER.info("Starting summary stream for {} selections", request.selection().size());
+        LOGGER.info(
+                "Starting summary stream for {} sections across {} documents",
+                request.sectionIds().size(),
+                request.documentIds().size());
         return chatService.streamSummary(request);
     }
 }

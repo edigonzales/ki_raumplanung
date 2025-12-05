@@ -73,8 +73,7 @@
     </div>
     <div class="column">
         <h2>Schritt 2: Kontext wählen und Aufgabe stellen</h2>
-        <form hx-post="/summary" hx-target="#summary-panel" hx-swap="innerHTML"
-              hx-include="#search-results input[name=selection]:checked">
+        <form hx-post="/summary" hx-target="#summary-panel" hx-swap="innerHTML">
             <label for="prompt">Aufgabe</label><br>
             <textarea id="prompt" name="prompt" rows="4" cols="50" required>Fasse die ausgewählten Abschnitte zusammen.</textarea><br>
             <button type="submit">Antwort generieren</button>
@@ -205,6 +204,32 @@
                 }
             }
         });
+
+        const summaryForm = document.querySelector('form[hx-post="/summary"]');
+        if (summaryForm) {
+            summaryForm.addEventListener('htmx:configRequest', (event) => {
+                const sectionToggles = Array.from(searchResults.querySelectorAll('[data-section-toggle]:checked'));
+                const sectionIds = sectionToggles
+                        .map((toggle) => toggle.value)
+                        .filter((value) => value && value.trim() !== '');
+
+                if (sectionIds.length === 0) {
+                    event.preventDefault();
+                    return;
+                }
+
+                const documentIds = Array.from(new Set(sectionToggles
+                        .map((toggle) => toggle.closest('[data-document-card]'))
+                        .filter((card) => card && card.dataset.documentId)
+                        .map((card) => card.dataset.documentId)));
+
+                event.detail.parameters = {
+                    ...event.detail.parameters,
+                    sectionIds: sectionIds,
+                    documentIds: documentIds,
+                };
+            });
+        }
     }
 </script>
 </body>
