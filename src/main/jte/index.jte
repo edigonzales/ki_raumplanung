@@ -82,15 +82,8 @@
             <textarea id="prompt" name="prompt" rows="4" cols="50" required>Fasse die ausgewählten Abschnitte zum Thema [THEMA] in [Gestaltungsplänen] zusammen.</textarea><br>
             <div class="task-controls">
                 <div class="task-select">
-                    <label for="model">Modell</label>
-                    <select id="model" name="model">
-                        <option value="gpt-4o-mini">gpt-4o-mini</option>
-                        <option value="gpt-5-mini">gpt-5-mini</option>
-                    </select>
-                </div>
-                <div class="task-select">
                     <label for="template">Templates</label>
-                    <select id="template" name="template">
+                    <select id="template" name="template" disabled>
                     </select>
                 </div>
             </div>
@@ -99,6 +92,15 @@
                     <input type="checkbox" id="useFullDocuments" name="useFullDocuments">
                     Gesamte Dokument(e) verwenden
                 </label>
+            </div>
+            <div class="task-controls">
+                <div class="task-select">
+                    <label for="model">Modell</label>
+                    <select id="model" name="model" disabled>
+                        <option value="gpt-4o-mini">gpt-4o-mini</option>
+                        <option value="gpt-5-mini">gpt-5-mini</option>
+                    </select>
+                </div>
             </div>
             <button type="submit">Antwort generieren</button>
         </form>
