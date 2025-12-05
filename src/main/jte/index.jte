@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <title>RAG Assistent</title>
     <script src="https://unpkg.com/htmx.org@2.0.8"></script>
-    <script src="https://unpkg.com/htmx.org@2.0.8/dist/ext/sse.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.4/sse.min.js"></script>
     <style>
         .layout { display: flex; gap: 1rem; align-items: flex-start; }
         .column { flex: 1; }
