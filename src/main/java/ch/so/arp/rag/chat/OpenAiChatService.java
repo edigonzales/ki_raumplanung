@@ -43,6 +43,7 @@ public class OpenAiChatService implements ChatService {
             String content = chatClient.prompt().system(promptFactory.buildSystemPromptWithoutUserQuestion(prompt)).user(request.prompt()).call().content();
             emitter.send(SseEmitter.event().name("message").data(content));
             emitter.send(SseEmitter.event().name("close").data("close"));
+            LOGGER.info("SSE close event sent.");            
             emitter.complete();
         } catch (Exception e) {
             LOGGER.warn("Failed to stream OpenAI response, falling back to error", e);
