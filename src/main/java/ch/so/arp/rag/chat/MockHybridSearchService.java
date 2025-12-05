@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import org.springframework.util.StringUtils;
 
@@ -49,14 +50,58 @@ public class MockHybridSearchService implements DocumentSearchService {
     }
 
     @Override
-    public List<DocumentChunk> findBySectionSelections(List<Long> sectionIds, List<UUID> documentIds) {
-        if (sectionIds == null || sectionIds.isEmpty() || documentIds == null || documentIds.isEmpty()) {
+    public List<SectionSelection> findBySectionSelections(List<Long> sectionIds, List<UUID> documentIds) {
+        boolean hasSections = sectionIds != null && !sectionIds.isEmpty();
+        boolean hasDocuments = documentIds != null && !documentIds.isEmpty();
+
+        if (!hasSections && !hasDocuments) {
             return Collections.emptyList();
         }
-        return sectionIds.stream()
-                .map(indexedChunks::get)
-                .filter(chunk -> chunk != null && documentIds.contains(chunk.documentId()))
-                .toList();
+
+        List<SectionSelection> selections = new ArrayList<>();
+
+        if (hasSections) {
+            selections.addAll(sectionIds.stream()
+                    .map(indexedChunks::get)
+                    .filter(chunk -> chunk != null && (!hasDocuments || documentIds.contains(chunk.documentId())))
+                    .map(chunk -> new SectionSelection(
+                            chunk.documentId(),
+                            chunk.filename(),
+                            chunk.title(),
+                            chunk.sectionId(),
+                            chunk.sectionPath(),
+                            chunk.sectionText()))
+                    .toList());
+        }
+
+        if (hasDocuments) {
+            for (UUID documentId : documentIds) {
+                List<DocumentChunk> docChunks = indexedChunks.values().stream()
+                        .filter(chunk -> chunk.documentId().equals(documentId))
+                        .sorted(Comparator.comparingLong(DocumentChunk::id))
+                        .toList();
+                if (docChunks.isEmpty()) {
+                    continue;
+                }
+                String mergedText = docChunks.stream()
+                        .map(DocumentChunk::sectionText)
+                        .filter(text -> text != null && !text.isBlank())
+                        .collect(Collectors.joining(" "));
+                DocumentChunk firstChunk = docChunks.getFirst();
+                selections.add(new SectionSelection(
+                        documentId,
+                        firstChunk.filename(),
+                        firstChunk.title(),
+                        null,
+                        null,
+                        mergedText));
+            }
+        }
+
+        selections.sort(Comparator.comparing(SectionSelection::title, Comparator.nullsLast(String::compareToIgnoreCase))
+                .thenComparing(selection -> selection.sectionPath() == null ? "" : selection.sectionPath(), String::compareToIgnoreCase));
+
+        return selections;
     }
 
     @Override

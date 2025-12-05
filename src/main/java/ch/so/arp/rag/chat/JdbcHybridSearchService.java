@@ -42,58 +42,65 @@ public class JdbcHybridSearchService implements DocumentSearchService {
     }
 
     @Override
-    public List<DocumentChunk> findBySectionSelections(List<Long> sectionIds, List<UUID> documentIds) {
-        if (sectionIds == null || sectionIds.isEmpty() || documentIds == null || documentIds.isEmpty()) {
+    public List<SectionSelection> findBySectionSelections(List<Long> sectionIds, List<UUID> documentIds) {
+        boolean hasSections = sectionIds != null && !sectionIds.isEmpty();
+        boolean hasDocuments = documentIds != null && !documentIds.isEmpty();
+
+        if (!hasSections && !hasDocuments) {
             return Collections.emptyList();
         }
-        String sql = """
-                WITH filtered AS (
+
+        List<SectionSelection> selections = new java.util.ArrayList<>();
+
+        if (hasSections) {
+            String sectionSql = """
                     SELECT
-                        c.id,
                         c.document_id,
                         d.filename,
                         d.title,
                         c.section_id,
                         s.section_path,
-                        c.text AS text,
-                        substring(c.text FROM 1 FOR 240) AS snippet,
-                        c.municipality,
-                        c.plan_type
+                        string_agg(c.text, ' ' ORDER BY c.id) AS text
                     FROM arp_rag_vp.chunks c
                     JOIN arp_rag_vp.documents d ON d.id = c.document_id
                     LEFT JOIN arp_rag_vp.sections s ON s.id = c.section_id
                     WHERE c.section_id IN (:sectionIds)
-                      AND c.document_id IN (:documentIds)
-                ), section_texts AS (
-                    SELECT COALESCE(section_id, id) AS section_key,
-                           string_agg(text, ' ' ORDER BY id) AS section_text
-                    FROM filtered
-                    GROUP BY COALESCE(section_id, id)
-                )
-                SELECT
-                    f.id,
-                    f.document_id,
-                    f.filename,
-                    f.title,
-                    f.section_id,
-                    f.section_path,
-                    f.text,
-                    st.section_text,
-                    f.snippet,
-                    f.municipality,
-                    f.plan_type,
-                    NULL::double precision AS keyword_score,
-                    NULL::double precision AS vector_score,
-                    NULL::double precision AS hybrid_score
-                FROM filtered f
-                    JOIN section_texts st ON st.section_key = COALESCE(f.section_id, f.id)
-                ORDER BY f.id ASC
-                """;
-        return jdbcClient.sql(sql)
-                .param("sectionIds", sectionIds)
-                .param("documentIds", documentIds)
-                .query(DataClassRowMapper.newInstance(DocumentChunk.class))
-                .list();
+                    GROUP BY c.document_id, d.filename, d.title, c.section_id, s.section_path
+                    ORDER BY d.title, s.section_path
+                    """;
+
+            selections.addAll(jdbcClient.sql(sectionSql)
+                    .param("sectionIds", sectionIds)
+                    .query(DataClassRowMapper.newInstance(SectionSelection.class))
+                    .list());
+        }
+
+        if (hasDocuments) {
+            String documentSql = """
+                    SELECT
+                        d.id AS document_id,
+                        d.filename,
+                        d.title,
+                        NULL::bigint AS section_id,
+                        NULL::text AS section_path,
+                        string_agg(c.text, ' ' ORDER BY c.id) AS text
+                    FROM arp_rag_vp.documents d
+                    JOIN arp_rag_vp.chunks c ON c.document_id = d.id
+                    WHERE d.id IN (:documentIds)
+                    GROUP BY d.id, d.filename, d.title
+                    ORDER BY d.title
+                    """;
+
+            selections.addAll(jdbcClient.sql(documentSql)
+                    .param("documentIds", documentIds)
+                    .query(DataClassRowMapper.newInstance(SectionSelection.class))
+                    .list());
+        }
+
+        selections.sort(java.util.Comparator.comparing(SectionSelection::title, java.util.Comparator.nullsLast(String::compareToIgnoreCase))
+                .thenComparing(selection -> selection.sectionPath() == null ? "" : selection.sectionPath(), String::compareToIgnoreCase));
+
+        return selections;
     }
 
     @Override

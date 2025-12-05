@@ -1,5 +1,5 @@
 @param String streamUrl
-@param java.util.List<ch.so.arp.rag.chat.DocumentChunk> selection
+@param java.util.List<ch.so.arp.rag.chat.SectionSelection> selection
 @param String prompt
 @if(streamUrl == null || streamUrl.isBlank()) {
     <p>Bitte wähle mindestens einen Abschnitt aus.</p>
@@ -8,8 +8,11 @@
         <p>Aufgabe: ${prompt}</p>
         <p>Kontext: ${selection.size()} Abschnitte</p>
         <ul>
-            @for(ch.so.arp.rag.chat.DocumentChunk chunk : selection) {
-                <li>${chunk.title()} – ${chunk.sectionPath()}</li>
+            @for(ch.so.arp.rag.chat.SectionSelection selected : selection) {
+                <li>
+                    ${selected.title()} –
+                    ${selected.sectionPath() != null ? selected.sectionPath() : "Ganzes Dokument"}
+                </li>
             @endfor
         </ul>
         <div id="summary-output" sse-swap="message">
