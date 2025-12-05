@@ -3,7 +3,6 @@ package ch.so.arp.rag.chat;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.UUID;
 
 import org.springframework.jdbc.core.DataClassRowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -42,20 +41,41 @@ public class JdbcHybridSearchService implements DocumentSearchService {
     }
 
     @Override
-    public List<SectionSelection> findBySectionSelections(List<Long> sectionIds, List<UUID> documentIds) {
+    public List<SectionSelection> findBySectionSelections(List<Long> sectionIds, boolean useFullDocuments) {
         boolean hasSections = sectionIds != null && !sectionIds.isEmpty();
-        boolean hasDocuments = documentIds != null && !documentIds.isEmpty();
-        java.util.Set<UUID> documentIdSet = hasDocuments
-                ? new java.util.HashSet<>(documentIds)
-                : java.util.Collections.emptySet();
 
-        if (!hasSections && !hasDocuments) {
+        if (!hasSections) {
             return Collections.emptyList();
         }
 
         List<SectionSelection> selections = new java.util.ArrayList<>();
 
-        if (hasSections) {
+        if (useFullDocuments) {
+            String documentSql = """
+                    WITH selected_documents AS (
+                        SELECT DISTINCT c.document_id
+                        FROM arp_rag_vp.chunks c
+                        WHERE c.section_id IN (:sectionIds)
+                    )
+                    SELECT
+                        d.id AS document_id,
+                        d.filename,
+                        d.title,
+                        NULL::bigint AS section_id,
+                        NULL::text AS section_path,
+                        string_agg(c.text, ' ' ORDER BY c.id) AS text
+                    FROM selected_documents sd
+                    JOIN arp_rag_vp.documents d ON d.id = sd.document_id
+                    JOIN arp_rag_vp.chunks c ON c.document_id = d.id
+                    GROUP BY d.id, d.filename, d.title
+                    ORDER BY d.title
+                    """;
+
+            selections.addAll(jdbcClient.sql(documentSql)
+                    .param("sectionIds", sectionIds)
+                    .query(DataClassRowMapper.newInstance(SectionSelection.class))
+                    .list());
+        } else {
             String sectionSql = """
                     SELECT
                         c.document_id,
@@ -72,39 +92,8 @@ public class JdbcHybridSearchService implements DocumentSearchService {
                     ORDER BY d.title, s.section_path
                     """;
 
-            List<SectionSelection> sectionSelections = jdbcClient.sql(sectionSql)
+            selections.addAll(jdbcClient.sql(sectionSql)
                     .param("sectionIds", sectionIds)
-                    .query(DataClassRowMapper.newInstance(SectionSelection.class))
-                    .list();
-
-            if (hasDocuments) {
-                sectionSelections = sectionSelections.stream()
-                        .filter(selection -> selection.documentId() == null
-                                || !documentIdSet.contains(selection.documentId()))
-                        .toList();
-            }
-
-            selections.addAll(sectionSelections);
-        }
-
-        if (hasDocuments) {
-            String documentSql = """
-                    SELECT
-                        d.id AS document_id,
-                        d.filename,
-                        d.title,
-                        NULL::bigint AS section_id,
-                        NULL::text AS section_path,
-                        string_agg(c.text, ' ' ORDER BY c.id) AS text
-                    FROM arp_rag_vp.documents d
-                    JOIN arp_rag_vp.chunks c ON c.document_id = d.id
-                    WHERE d.id IN (:documentIds)
-                    GROUP BY d.id, d.filename, d.title
-                    ORDER BY d.title
-                    """;
-
-            selections.addAll(jdbcClient.sql(documentSql)
-                    .param("documentIds", documentIds)
                     .query(DataClassRowMapper.newInstance(SectionSelection.class))
                     .list());
         }

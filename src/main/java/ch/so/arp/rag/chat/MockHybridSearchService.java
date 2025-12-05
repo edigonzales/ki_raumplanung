@@ -50,34 +50,22 @@ public class MockHybridSearchService implements DocumentSearchService {
     }
 
     @Override
-    public List<SectionSelection> findBySectionSelections(List<Long> sectionIds, List<UUID> documentIds) {
+    public List<SectionSelection> findBySectionSelections(List<Long> sectionIds, boolean useFullDocuments) {
         boolean hasSections = sectionIds != null && !sectionIds.isEmpty();
-        boolean hasDocuments = documentIds != null && !documentIds.isEmpty();
-        java.util.Set<UUID> documentIdSet = hasDocuments
-                ? new java.util.HashSet<>(documentIds)
-                : java.util.Collections.emptySet();
 
-        if (!hasSections && !hasDocuments) {
+        if (!hasSections) {
             return Collections.emptyList();
         }
 
         List<SectionSelection> selections = new ArrayList<>();
 
-        if (hasSections) {
-            selections.addAll(sectionIds.stream()
+        if (useFullDocuments) {
+            java.util.Set<UUID> documentIds = sectionIds.stream()
                     .map(indexedChunks::get)
-                    .filter(chunk -> chunk != null && (!hasDocuments || !documentIdSet.contains(chunk.documentId())))
-                    .map(chunk -> new SectionSelection(
-                            chunk.documentId(),
-                            chunk.filename(),
-                            chunk.title(),
-                            chunk.sectionId(),
-                            chunk.sectionPath(),
-                            chunk.sectionText()))
-                    .toList());
-        }
+                    .filter(chunk -> chunk != null)
+                    .map(DocumentChunk::documentId)
+                    .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
 
-        if (hasDocuments) {
             for (UUID documentId : documentIds) {
                 List<DocumentChunk> docChunks = indexedChunks.values().stream()
                         .filter(chunk -> chunk.documentId().equals(documentId))
@@ -99,6 +87,18 @@ public class MockHybridSearchService implements DocumentSearchService {
                         null,
                         mergedText));
             }
+        } else {
+            selections.addAll(sectionIds.stream()
+                    .map(indexedChunks::get)
+                    .filter(chunk -> chunk != null)
+                    .map(chunk -> new SectionSelection(
+                            chunk.documentId(),
+                            chunk.filename(),
+                            chunk.title(),
+                            chunk.sectionId(),
+                            chunk.sectionPath(),
+                            chunk.sectionText()))
+                    .toList());
         }
 
         selections.sort(Comparator.comparing(SectionSelection::title, Comparator.nullsLast(String::compareToIgnoreCase))

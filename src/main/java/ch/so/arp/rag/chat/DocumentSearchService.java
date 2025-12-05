@@ -7,7 +7,7 @@ public interface DocumentSearchService {
 
     List<DocumentResult> search(String keywords, double lexicalWeight, String municipality, String planType);
 
-    List<SectionSelection> findBySectionSelections(List<Long> sectionIds, List<UUID> documentIds);
+    List<SectionSelection> findBySectionSelections(List<Long> sectionIds, boolean useFullDocuments);
 
     String hybridSearchSql();
 }

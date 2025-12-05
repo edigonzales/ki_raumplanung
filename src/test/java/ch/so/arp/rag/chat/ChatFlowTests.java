@@ -43,7 +43,7 @@ class ChatFlowTests {
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("prompt", "Bitte zusammenfassen")
                         .param("sectionIds", "1")
-                        .param("documentIds", "11111111-1111-1111-1111-111111111111"))
+                        .param("useFullDocuments", "true"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("sse-connect")))
                 .andExpect(content().string(not(containsString("Bitte wähle mindestens einen Abschnitt"))));

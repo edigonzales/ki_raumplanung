@@ -43,9 +43,8 @@ public class ChatPageController {
     @PostMapping("/summary")
     public String summary(@ModelAttribute @Validated SummaryForm form, Model model, UriComponentsBuilder uriBuilder) {
         List<Long> sectionIds = form.sectionIds() == null ? Collections.emptyList() : form.sectionIds();
-        List<java.util.UUID> documentIds = form.documentIds() == null ? Collections.emptyList() : form.documentIds();
 
-        var selection = searchService.findBySectionSelections(sectionIds, documentIds);
+        var selection = searchService.findBySectionSelections(sectionIds, form.useFullDocuments());
         if (selection.isEmpty()) {
             model.addAttribute("streamUrl", "");
             model.addAttribute("selection", selection);

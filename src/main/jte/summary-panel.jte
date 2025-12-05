@@ -6,7 +6,7 @@
 @else {
     <div hx-ext="sse" sse-connect="${streamUrl}">
         <p>Aufgabe: ${prompt}</p>
-        <p>Kontext: ${selection.size()} Abschnitte</p>
+        <p>Kontext: ${selection.size()} ${selection.stream().allMatch(selected -> selected.sectionId() == null) ? "Dokumente" : "Abschnitte"}</p>
         <ul>
             @for(ch.so.arp.rag.chat.SectionSelection selected : selection) {
                 <li>

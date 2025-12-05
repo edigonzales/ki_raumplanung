@@ -19,12 +19,6 @@
                     @endif
                 </div>
             </div>
-            <div class="document-actions">
-                <label>
-                    <input type="checkbox" data-use-full-document value="${document.documentId().toString()}">
-                    Gesamtes Dokument verwenden
-                </label>
-            </div>
             <div class="section-list">
                 @for(ch.so.arp.rag.chat.SectionResult section : document.sections())
                     <div class="section-card" data-section-card data-section-id="${section.sectionId()}">

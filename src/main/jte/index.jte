@@ -14,6 +14,8 @@
         .section-card { border: 1px solid #ddd; padding: 0.5rem; margin-top: 0.5rem; background: #fafafa; }
         .section-card details { margin-top: 0.25rem; }
         .section-card summary { cursor: pointer; }
+        .full-document-toggle { display: flex; justify-content: flex-end; margin: 0.5rem 0; }
+        .full-document-toggle label { font-weight: 600; }
     </style>
 </head>
 <body>
@@ -76,6 +78,12 @@
         <form hx-post="/summary" hx-target="#summary-panel" hx-swap="innerHTML">
             <label for="prompt">Aufgabe</label><br>
             <textarea id="prompt" name="prompt" rows="4" cols="50" required>Fasse die ausgewählten Abschnitte zusammen.</textarea><br>
+            <div class="full-document-toggle">
+                <label>
+                    <input type="checkbox" id="useFullDocuments" name="useFullDocuments">
+                    Gesamte Dokument(e) verwenden
+                </label>
+            </div>
             <button type="submit">Antwort generieren</button>
         </form>
         <div id="summary-panel">
@@ -208,35 +216,25 @@
         const summaryForm = document.querySelector('form[hx-post="/summary"]');
         if (summaryForm) {
             summaryForm.addEventListener('htmx:configRequest', (event) => {
-                const documentCards = Array.from(searchResults.querySelectorAll('[data-document-card]'));
-                const fullDocumentIds = documentCards
-                        .map((card) => {
-                            const checkbox = card.querySelector('[data-use-full-document]');
-                            return checkbox && checkbox.checked ? card.dataset.documentId : null;
-                        })
-                        .filter((id) => id);
-
-                const sectionToggles = Array.from(searchResults.querySelectorAll('[data-section-toggle]:checked'))
-                        .filter((toggle) => {
-                            const documentCard = toggle.closest('[data-document-card]');
-                            return !documentCard || !fullDocumentIds.includes(documentCard.dataset.documentId);
-                        });
+                const sectionToggles = Array.from(searchResults.querySelectorAll('[data-section-toggle]:checked'));
 
                 const sectionIds = sectionToggles
                         .map((toggle) => toggle.value)
                         .filter((value) => value && value.trim() !== '');
 
-                if (sectionIds.length === 0 && fullDocumentIds.length === 0) {
+                if (sectionIds.length === 0) {
                     event.preventDefault();
                     return;
                 }
 
-                const documentIds = Array.from(new Set(fullDocumentIds));
+                const fullDocumentToggle = document.getElementById('useFullDocuments');
+
+                const useFullDocuments = fullDocumentToggle ? fullDocumentToggle.checked : false;
 
                 event.detail.parameters = {
                     ...event.detail.parameters,
                     sectionIds: sectionIds,
-                    documentIds: documentIds,
+                    useFullDocuments: useFullDocuments,
                 };
             });
         }
