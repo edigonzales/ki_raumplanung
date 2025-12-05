@@ -16,7 +16,7 @@
         .section-card summary { cursor: pointer; }
         .full-document-toggle { display: flex; justify-content: flex-start; margin: 0.5rem 0; }
         .full-document-toggle label { font-weight: 400; }
-        .task-controls { display: flex; justify-content: flex-end; gap: 1rem; margin: 0.5rem 0; }
+        .task-controls { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; margin: 0.5rem 0; }
         .task-select { display: flex; flex-direction: column; text-align: left; }
     </style>
 </head>
