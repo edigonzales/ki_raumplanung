@@ -17,9 +17,11 @@ public class MockChatService implements ChatService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MockChatService.class);
     private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final MarkdownRenderer markdownRenderer;
     private final TaskContextStore contextStore;
 
-    public MockChatService(TaskContextStore contextStore) {
+    public MockChatService(MarkdownRenderer markdownRenderer, TaskContextStore contextStore) {
+        this.markdownRenderer = markdownRenderer;
         this.contextStore = contextStore;
     }
 
@@ -42,11 +44,11 @@ public class MockChatService implements ChatService {
         String closing = "Mock-Antwort basierend auf den ausgewählten Abschnitten.";
 
         try {
-            emitter.send(SseEmitter.event().name("message").data(preamble));
+            emitter.send(SseEmitter.event().name("message").data(markdownRenderer.render(preamble)));
             pause();
-            emitter.send(SseEmitter.event().name("message").data(details));
+            emitter.send(SseEmitter.event().name("message").data(markdownRenderer.render(details)));
             pause();
-            emitter.send(SseEmitter.event().name("message").data(closing));
+            emitter.send(SseEmitter.event().name("message").data(markdownRenderer.render(closing)));
             emitter.send(SseEmitter.event().name("close").data("close"));
             emitter.complete();
         } catch (IOException e) {

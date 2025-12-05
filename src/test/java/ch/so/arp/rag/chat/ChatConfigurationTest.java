@@ -27,7 +27,7 @@ class ChatConfigurationTest {
         when(builderProvider.getIfAvailable()).thenReturn(builder);
 
         ChatService chatService = configuration.chatService(environment, emptyClientProvider, builderProvider,
-                mock(DocumentSearchService.class), new PromptFactory(), new TaskContextStore());
+                mock(DocumentSearchService.class), new PromptFactory(), new TaskContextStore(), new MarkdownRenderer());
 
         assertThat(chatService).isInstanceOf(OpenAiChatService.class);
     }

@@ -19,15 +19,17 @@ public class OpenAiChatService implements ChatService {
     private final DocumentSearchService searchService;
     private final PromptFactory promptFactory;
     private final TaskContextStore contextStore;
+    private final MarkdownRenderer markdownRenderer;
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
     public OpenAiChatService(
             ChatClient chatClient, DocumentSearchService searchService, PromptFactory promptFactory,
-            TaskContextStore contextStore) {
+            TaskContextStore contextStore, MarkdownRenderer markdownRenderer) {
         this.chatClient = chatClient;
         this.searchService = searchService;
         this.promptFactory = promptFactory;
         this.contextStore = contextStore;
+        this.markdownRenderer = markdownRenderer;
     }
 
     @Override
@@ -41,14 +43,16 @@ public class OpenAiChatService implements ChatService {
         try {
             String prompt = buildPrompt(request);
             String content = chatClient.prompt().system(promptFactory.buildSystemPromptWithoutUserQuestion(prompt)).user(request.prompt()).call().content();
-            emitter.send(SseEmitter.event().name("message").data(content));
+            String rendered = markdownRenderer.render(content);
+            emitter.send(SseEmitter.event().name("message").data(rendered));
             emitter.send(SseEmitter.event().name("close").data("close"));
-            LOGGER.info("SSE close event sent.");            
+            LOGGER.info("SSE close event sent.");
             emitter.complete();
         } catch (Exception e) {
             LOGGER.warn("Failed to stream OpenAI response, falling back to error", e);
             try {
-                emitter.send(SseEmitter.event().name("message").data("Keine Antwort vom LLM verfügbar."));
+                emitter.send(SseEmitter.event().name("message")
+                        .data(markdownRenderer.render("Keine Antwort vom LLM verfügbar.")));
                 emitter.send(SseEmitter.event().name("close").data("close"));
                 emitter.completeWithError(e);
             } catch (IOException ioException) {
