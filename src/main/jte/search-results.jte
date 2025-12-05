@@ -6,7 +6,7 @@
     <button type="button" data-select-all data-label-select="Alle Abschnitte auswählen"
             data-label-deselect="Alle Abschnitte abwählen" aria-pressed="false">Alle Abschnitte auswählen</button>
     @for(ch.so.arp.rag.chat.DocumentResult document : results)
-        <div class="result-card" data-document-card>
+        <div class="result-card" data-document-card data-document-id="${document.documentId().toString()}">
             <div class="document-header">
                 <label>
                     <input type="checkbox" data-document-toggle aria-label="Dokument auswählen"
@@ -21,10 +21,11 @@
             </div>
             <div class="section-list">
                 @for(ch.so.arp.rag.chat.SectionResult section : document.sections())
-                    <div class="section-card" data-section-card>
+                    <div class="section-card" data-section-card data-section-id="${section.sectionId()}">
                         <label>
                             <input type="checkbox" data-section-toggle aria-label="Abschnitt auswählen"
-                                   id="section-${section.sectionId()}" data-section-id="${section.sectionId()}">
+                                   id="section-${section.sectionId()}" data-section-id="${section.sectionId()}"
+                                   value="${section.sectionId()}">
                             <strong>${section.sectionPath() != null ? section.sectionPath() : "Abschnitt"}</strong>
                         </label>
                         <details>
@@ -32,8 +33,8 @@
                             <p>${section.sectionText()}</p>
                         </details>
                         <div class="chunk-selection-container">
-                            @for(Long chunkId : section.chunkIds()) 
-                                <input type="checkbox" class="chunk-selection" name="selection" value="${chunkId}" hidden>
+                            @for(Long chunkId : section.chunkIds())
+                                <input type="checkbox" class="chunk-selection" value="${chunkId}" hidden>
                             @endfor
                         </div>
                     </div>

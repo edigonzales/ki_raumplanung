@@ -1,12 +1,13 @@
 package ch.so.arp.rag.chat;
 
 import java.util.List;
+import java.util.UUID;
 
 public interface DocumentSearchService {
 
     List<DocumentResult> search(String keywords, double lexicalWeight, String municipality, String planType);
 
-    List<DocumentChunk> findByIds(List<Long> ids);
+    List<DocumentChunk> findBySectionSelections(List<Long> sectionIds, List<UUID> documentIds);
 
     String hybridSearchSql();
 }

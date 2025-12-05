@@ -1,11 +1,17 @@
 package ch.so.arp.rag.chat;
 
 import java.util.List;
+import java.util.UUID;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 
 public record SummaryStreamRequest(
         @NotBlank String prompt,
-        @NotEmpty List<Long> selection) {
+        List<Long> sectionIds,
+        List<UUID> documentIds) {
+
+    public SummaryStreamRequest {
+        sectionIds = sectionIds == null ? List.of() : sectionIds;
+        documentIds = documentIds == null ? List.of() : documentIds;
+    }
 }

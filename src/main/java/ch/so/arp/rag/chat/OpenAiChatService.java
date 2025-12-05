@@ -2,8 +2,10 @@ package ch.so.arp.rag.chat;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,12 +48,19 @@ public class OpenAiChatService implements ChatService {
     }
 
     private String buildPrompt(SummaryStreamRequest request) {
-        List<String> sections = request.selection().stream()
+        List<String> sections = request.sectionIds().stream()
                 .map(id -> "Abschnitt " + id)
                 .toList();
 
+        String sectionLabel = sections.isEmpty() ? "keine ausgewählten Abschnitte" : String.join(", ", sections);
+
+        String documentLabel = request.documentIds().isEmpty()
+                ? "keine ausgewählten Dokumente"
+                : request.documentIds().stream().map(UUID::toString).collect(Collectors.joining(", "));
+
         return "Erstelle eine Zusammenfassung basierend auf folgenden Abschnitten: "
-                + String.join(", ", sections)
+                + sectionLabel
+                + " aus den Dokumenten: " + documentLabel
                 + ". Nutzeranfrage: " + request.prompt();
     }
 

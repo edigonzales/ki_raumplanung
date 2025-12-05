@@ -26,12 +26,12 @@ public class MockChatService implements ChatService {
     }
 
     private void sendMockResponse(SseEmitter emitter, SummaryStreamRequest request) {
-        List<String> rows = request.selection().stream()
+        List<String> rows = request.sectionIds().stream()
                 .map(id -> "• Abschnitt " + id)
                 .toList();
 
         String preamble = "Zusammenfassung für \"" + request.prompt() + "\"";
-        String details = String.join("\n", rows);
+        String details = rows.isEmpty() ? "Keine Abschnitte ausgewählt." : String.join("\n", rows);
         String closing = "Mock-Antwort basierend auf den ausgewählten Abschnitten.";
 
         try {
