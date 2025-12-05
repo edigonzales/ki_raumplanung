@@ -20,9 +20,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class ChatPageController {
 
     private final DocumentSearchService searchService;
+    private final TaskContextStore contextStore;
 
-    public ChatPageController(DocumentSearchService searchService) {
+    public ChatPageController(DocumentSearchService searchService, TaskContextStore contextStore) {
         this.searchService = searchService;
+        this.contextStore = contextStore;
     }
 
     @GetMapping("/")
@@ -65,10 +67,13 @@ public class ChatPageController {
                 .distinct()
                 .toList();
 
+        java.util.UUID contextToken = contextStore.store(selection);
+
         String streamUrl = uriBuilder.path("/api/chat/task-stream")
                 .queryParam("prompt", form.prompt())
                 .queryParam("sectionIds", effectiveSectionIds)
                 .queryParam("documentIds", effectiveDocumentIds)
+                .queryParam("contextToken", contextToken)
                 .build()
                 .toUriString();
 

@@ -33,13 +33,13 @@ public class ChatConfiguration {
     @Bean
     ChatService chatService(Environment environment, ObjectProvider<ChatClient> chatClientProvider,
             ObjectProvider<ChatClient.Builder> chatClientBuilderProvider, DocumentSearchService documentSearchService,
-            PromptFactory promptFactory) {
+            PromptFactory promptFactory, TaskContextStore contextStore) {
         boolean openAiEnabled = environment.getProperty("spring.ai.openai.enabled", Boolean.class, true)
                 && environment.getProperty("spring.ai.openai.chat.enabled", Boolean.class, true);
         String apiKey = environment.getProperty("spring.ai.openai.api-key");
         if (!openAiEnabled || !StringUtils.hasText(apiKey)) {
             LOGGER.info("Falling back to mock chat service");
-            return new MockChatService();
+            return new MockChatService(contextStore);
         }
 
         ChatClient chatClient = chatClientProvider.getIfAvailable();
@@ -52,10 +52,10 @@ public class ChatConfiguration {
         }
         if (chatClient != null) {
             LOGGER.info("Using OpenAI chat service");
-            return new OpenAiChatService(chatClient, documentSearchService, promptFactory);
+            return new OpenAiChatService(chatClient, documentSearchService, promptFactory, contextStore);
         }
         LOGGER.info("Falling back to mock chat service");
-        return new MockChatService();
+        return new MockChatService(contextStore);
     }
 
     @Bean

@@ -18,12 +18,16 @@ public class OpenAiChatService implements ChatService {
     private final ChatClient chatClient;
     private final DocumentSearchService searchService;
     private final PromptFactory promptFactory;
+    private final TaskContextStore contextStore;
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
-    public OpenAiChatService(ChatClient chatClient, DocumentSearchService searchService, PromptFactory promptFactory) {
+    public OpenAiChatService(
+            ChatClient chatClient, DocumentSearchService searchService, PromptFactory promptFactory,
+            TaskContextStore contextStore) {
         this.chatClient = chatClient;
         this.searchService = searchService;
         this.promptFactory = promptFactory;
+        this.contextStore = contextStore;
     }
 
     @Override
@@ -52,7 +56,7 @@ public class OpenAiChatService implements ChatService {
 
     private String buildPrompt(TaskStreamRequest request) {
         boolean useFullDocuments = !request.documentIds().isEmpty();
-        List<SectionSelection> selections = searchService.findBySectionSelections(request.sectionIds(), useFullDocuments);
+        List<SectionSelection> selections = resolveSelections(request, useFullDocuments);
 
         if (selections.isEmpty()) {
             return "Kein Kontext verfügbar.";
@@ -73,5 +77,14 @@ public class OpenAiChatService implements ChatService {
                 + " (" + documentInfo + ")\n"
                 + "Abschnitt: " + (scopeLabel == null ? "Unbekannt" : scopeLabel) + "\n"
                 + "Text:\n" + selection.text();
+    }
+
+    private List<SectionSelection> resolveSelections(TaskStreamRequest request, boolean useFullDocuments) {
+        List<SectionSelection> cachedSelections = contextStore.take(request.contextToken());
+        if (!cachedSelections.isEmpty()) {
+            return cachedSelections;
+        }
+
+        return searchService.findBySectionSelections(request.sectionIds(), useFullDocuments);
     }
 }

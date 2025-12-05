@@ -17,6 +17,11 @@ public class MockChatService implements ChatService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MockChatService.class);
     private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final TaskContextStore contextStore;
+
+    public MockChatService(TaskContextStore contextStore) {
+        this.contextStore = contextStore;
+    }
 
     @Override
     public SseEmitter streamTask(TaskStreamRequest request) {
@@ -26,8 +31,10 @@ public class MockChatService implements ChatService {
     }
 
     private void sendMockResponse(SseEmitter emitter, TaskStreamRequest request) {
-        List<String> rows = request.sectionIds().stream()
-                .map(id -> "• Abschnitt " + id)
+        List<SectionSelection> selections = resolveSelections(request);
+        List<String> rows = selections.stream()
+                .map(selected -> selected.sectionPath() != null ? selected.sectionPath() : "Ganzes Dokument")
+                .map(label -> "• " + label)
                 .toList();
 
         String preamble = "Aufgabe für \"" + request.prompt() + "\"";
@@ -45,6 +52,27 @@ public class MockChatService implements ChatService {
             LOGGER.warn("Failed to send SSE response", e);
             emitter.completeWithError(e);
         }
+    }
+
+    private List<SectionSelection> resolveSelections(TaskStreamRequest request) {
+        List<SectionSelection> cachedSelections = contextStore.take(request.contextToken());
+        if (!cachedSelections.isEmpty()) {
+            return cachedSelections;
+        }
+
+        if (!request.sectionIds().isEmpty()) {
+            return request.sectionIds().stream()
+                    .map(id -> new SectionSelection(null, null, null, id, "Abschnitt " + id, null))
+                    .toList();
+        }
+
+        if (!request.documentIds().isEmpty()) {
+            return request.documentIds().stream()
+                    .map(docId -> new SectionSelection(docId, null, null, null, null, null))
+                    .toList();
+        }
+
+        return List.of();
     }
 
     private void pause() {

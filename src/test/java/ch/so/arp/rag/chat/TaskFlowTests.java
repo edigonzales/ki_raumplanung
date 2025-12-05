@@ -11,6 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -25,6 +27,9 @@ class TaskFlowTests {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private TaskContextStore contextStore;
 
     @Test
     void searchReturnsResults() throws Exception {
@@ -51,10 +56,11 @@ class TaskFlowTests {
 
     @Test
     void streamTaskEmitsEvents() throws Exception {
+        var contextToken = contextStore.store(List.of(new SectionSelection(null, "file.pdf", "Titel", 1L, "Abschnitt 1", "Text")));
+
         MvcResult result = mockMvc.perform(get("/api/chat/task-stream")
                         .param("prompt", "Test")
-                        .param("sectionIds", "1", "2")
-                        .param("documentIds", "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222")
+                        .param("contextToken", contextToken.toString())
                         .accept(MediaType.TEXT_EVENT_STREAM))
                 .andExpect(request().asyncStarted())
                 .andReturn();
