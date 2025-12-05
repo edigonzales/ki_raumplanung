@@ -73,7 +73,7 @@ class TaskFlowTests {
                 .andReturn();
 
         String body = dispatched.getResponse().getContentAsString();
-        assertThat(body).contains("data:").contains("Aufgabe");
+        assertThat(body).contains("data:").contains("Aufgabe").contains("event:close");
     }
 
     @Test

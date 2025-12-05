@@ -4,7 +4,7 @@
 @if(streamUrl == null || streamUrl.isBlank())
     <p>Bitte wähle mindestens einen Abschnitt aus.</p>
 @else
-    <div hx-ext="sse" sse-connect="${streamUrl}">
+    <div hx-ext="sse" sse-connect="${streamUrl}" sse-close="close">
         <p>Aufgabe: ${prompt}</p>
         <p>Kontext: ${selection.size()} ${selection.stream().allMatch(selected -> selected.sectionId() == null) ? "Dokumente" : "Abschnitte"}</p>
         <ul>

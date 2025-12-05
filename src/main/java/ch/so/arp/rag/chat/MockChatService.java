@@ -47,6 +47,7 @@ public class MockChatService implements ChatService {
             emitter.send(SseEmitter.event().name("message").data(details));
             pause();
             emitter.send(SseEmitter.event().name("message").data(closing));
+            emitter.send(SseEmitter.event().name("close"));
             emitter.complete();
         } catch (IOException e) {
             LOGGER.warn("Failed to send SSE response", e);
