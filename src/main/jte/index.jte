@@ -14,8 +14,8 @@
         .section-card { border: 1px solid #ddd; padding: 0.5rem; margin-top: 0.5rem; background: #fafafa; }
         .section-card details { margin-top: 0.25rem; }
         .section-card summary { cursor: pointer; }
-        .full-document-toggle { display: flex; justify-content: flex-end; margin: 0.5rem 0; }
-        .full-document-toggle label { font-weight: 600; }
+        .full-document-toggle { display: flex; justify-content: flex-start; margin: 0.5rem 0; }
+        .full-document-toggle label { font-weight: 400; }
     </style>
 </head>
 <body>
