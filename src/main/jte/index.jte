@@ -76,7 +76,7 @@
     <div class="column">
         <h2>Schritt 2: Kontext wählen und Aufgabe stellen</h2>
         <form hx-post="/task" hx-target="#task-panel" hx-swap="innerHTML">
-            <label for="prompt">Aufgabe</label><br>
+            <label for="prompt">Aufgabe (z.B. auch Combobox für Templates für Strukturierung, damit man das nicht immer wiederholen muss)</label><br>
             <textarea id="prompt" name="prompt" rows="4" cols="50" required>Fasse die ausgewählten Abschnitte zum Thema [THEMA] in [Gestaltungsplänen] zusammen.</textarea><br>
             <div class="full-document-toggle">
                 <label>
