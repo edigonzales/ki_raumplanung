@@ -208,20 +208,30 @@
         const summaryForm = document.querySelector('form[hx-post="/summary"]');
         if (summaryForm) {
             summaryForm.addEventListener('htmx:configRequest', (event) => {
-                const sectionToggles = Array.from(searchResults.querySelectorAll('[data-section-toggle]:checked'));
+                const documentCards = Array.from(searchResults.querySelectorAll('[data-document-card]'));
+                const fullDocumentIds = documentCards
+                        .map((card) => {
+                            const checkbox = card.querySelector('[data-use-full-document]');
+                            return checkbox && checkbox.checked ? card.dataset.documentId : null;
+                        })
+                        .filter((id) => id);
+
+                const sectionToggles = Array.from(searchResults.querySelectorAll('[data-section-toggle]:checked'))
+                        .filter((toggle) => {
+                            const documentCard = toggle.closest('[data-document-card]');
+                            return !documentCard || !fullDocumentIds.includes(documentCard.dataset.documentId);
+                        });
+
                 const sectionIds = sectionToggles
                         .map((toggle) => toggle.value)
                         .filter((value) => value && value.trim() !== '');
 
-                if (sectionIds.length === 0) {
+                if (sectionIds.length === 0 && fullDocumentIds.length === 0) {
                     event.preventDefault();
                     return;
                 }
 
-                const documentIds = Array.from(new Set(sectionToggles
-                        .map((toggle) => toggle.closest('[data-document-card]'))
-                        .filter((card) => card && card.dataset.documentId)
-                        .map((card) => card.dataset.documentId)));
+                const documentIds = Array.from(new Set(fullDocumentIds));
 
                 event.detail.parameters = {
                     ...event.detail.parameters,

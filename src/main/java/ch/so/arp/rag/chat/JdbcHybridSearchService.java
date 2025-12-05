@@ -45,6 +45,9 @@ public class JdbcHybridSearchService implements DocumentSearchService {
     public List<SectionSelection> findBySectionSelections(List<Long> sectionIds, List<UUID> documentIds) {
         boolean hasSections = sectionIds != null && !sectionIds.isEmpty();
         boolean hasDocuments = documentIds != null && !documentIds.isEmpty();
+        java.util.Set<UUID> documentIdSet = hasDocuments
+                ? new java.util.HashSet<>(documentIds)
+                : java.util.Collections.emptySet();
 
         if (!hasSections && !hasDocuments) {
             return Collections.emptyList();
@@ -69,10 +72,19 @@ public class JdbcHybridSearchService implements DocumentSearchService {
                     ORDER BY d.title, s.section_path
                     """;
 
-            selections.addAll(jdbcClient.sql(sectionSql)
+            List<SectionSelection> sectionSelections = jdbcClient.sql(sectionSql)
                     .param("sectionIds", sectionIds)
                     .query(DataClassRowMapper.newInstance(SectionSelection.class))
-                    .list());
+                    .list();
+
+            if (hasDocuments) {
+                sectionSelections = sectionSelections.stream()
+                        .filter(selection -> selection.documentId() == null
+                                || !documentIdSet.contains(selection.documentId()))
+                        .toList();
+            }
+
+            selections.addAll(sectionSelections);
         }
 
         if (hasDocuments) {

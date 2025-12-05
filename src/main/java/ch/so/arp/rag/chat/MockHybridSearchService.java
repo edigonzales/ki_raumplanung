@@ -53,6 +53,9 @@ public class MockHybridSearchService implements DocumentSearchService {
     public List<SectionSelection> findBySectionSelections(List<Long> sectionIds, List<UUID> documentIds) {
         boolean hasSections = sectionIds != null && !sectionIds.isEmpty();
         boolean hasDocuments = documentIds != null && !documentIds.isEmpty();
+        java.util.Set<UUID> documentIdSet = hasDocuments
+                ? new java.util.HashSet<>(documentIds)
+                : java.util.Collections.emptySet();
 
         if (!hasSections && !hasDocuments) {
             return Collections.emptyList();
@@ -63,7 +66,7 @@ public class MockHybridSearchService implements DocumentSearchService {
         if (hasSections) {
             selections.addAll(sectionIds.stream()
                     .map(indexedChunks::get)
-                    .filter(chunk -> chunk != null && (!hasDocuments || documentIds.contains(chunk.documentId())))
+                    .filter(chunk -> chunk != null && (!hasDocuments || !documentIdSet.contains(chunk.documentId())))
                     .map(chunk -> new SectionSelection(
                             chunk.documentId(),
                             chunk.filename(),
