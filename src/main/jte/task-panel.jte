@@ -2,7 +2,7 @@
 @param java.util.List<ch.so.arp.rag.chat.SectionSelection> selection
 @param String prompt
 @if(streamUrl == null || streamUrl.isBlank())
-    <div class="notification is-light">Bitte wähle mindestens einen Abschnitt aus.</div>
+    <p class="has-text-grey">Bitte wähle mindestens einen Abschnitt aus.</p>
 @else
     <div hx-ext="sse" sse-connect="${streamUrl}" sse-close="close">
         <div class="content">
@@ -17,7 +17,7 @@
                 @endfor
             </ul>
         </div>
-        <div id="task-output" class="box" sse-swap="message">
+        <div id="task-output" class="mt-4 p-3 has-background-light" sse-swap="message">
             <p>Antwort wird geladen...</p>
         </div>
     </div>
