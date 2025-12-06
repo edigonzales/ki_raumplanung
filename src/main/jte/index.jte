@@ -186,7 +186,7 @@
     const promptCounter = document.getElementById('promptCounter');
     if (promptInput && promptCounter) {
         const updateCounter = () => {
-            promptCounter.textContent = `${promptInput.value.length} Zeichen`;
+            promptCounter.textContent = `${'$'}{promptInput.value.length} Zeichen`;
         };
         promptInput.addEventListener('input', updateCounter);
         updateCounter();
