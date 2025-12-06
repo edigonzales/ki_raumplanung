@@ -11,20 +11,17 @@
     <p class="has-text-grey">Keine Treffer gefunden.</p>
 @else
     @for(ch.so.arp.rag.chat.DocumentResult document : results)
-        @{ String filename = document.filename(); }
-        @{ String displayName = filename; }
-        @if(filename != null && filename.length() > 20)
-            @{ int prefixLength = 10; }
-            @{ int suffixLength = 7; }
-            @{ displayName = filename.substring(0, prefixLength) + "..." + filename.substring(filename.length() - suffixLength); }
-        @endif
         <div class="surface" data-document-card data-document-id="${document.documentId().toString()}">
             <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
                 <div>
                     <label class="checkbox">
                         <input type="checkbox" data-document-toggle aria-label="Dokument auswählen"
                                id="document-${document.documentId().toString()}">
-                        <strong title="${filename}">${displayName}</strong>
+                        <strong title="${document.filename()}">
+                            ${document.filename() != null && document.filename().length() > 20
+                                    ? document.filename().substring(0, 10) + "..." + document.filename().substring(document.filename().length() - 7)
+                                    : document.filename()}
+                        </strong>
                     </label>
                 </div>
                 @if(document.bestHybridScore() != null)
