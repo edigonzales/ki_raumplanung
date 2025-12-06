@@ -290,7 +290,7 @@
             setButtonLoading(searchButton, true);
         });
 
-        ['htmx:afterSwap', 'htmx:responseError', 'htmx:sendError', 'htmx:timeout']
+        ['htmx:afterSwap', 'htmx:afterRequest', 'htmx:responseError', 'htmx:sendError', 'htmx:timeout']
             .forEach((eventName) => {
                 searchForm.addEventListener(eventName, endSearch);
             });
@@ -308,7 +308,7 @@
             setButtonLoading(taskButton, true);
         });
 
-        ['htmx:afterSwap', 'htmx:responseError', 'htmx:sendError', 'htmx:timeout']
+        ['htmx:afterSwap', 'htmx:afterRequest', 'htmx:responseError', 'htmx:sendError', 'htmx:timeout']
             .forEach((eventName) => {
                 taskForm.addEventListener(eventName, endTaskRequest);
             });
