@@ -17,7 +17,7 @@
                 @endfor
             </ul>
         </div>
-        <div id="task-output" class="mt-4 p-3 has-background-light" sse-swap="message">
+        <div id="task-output" class="mt-4 p-3 has-background-info-light" sse-swap="message">
             <p>Antwort wird geladen...</p>
         </div>
     </div>

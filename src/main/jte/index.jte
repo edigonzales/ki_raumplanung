@@ -25,9 +25,38 @@
         .subtle-label { color: #6b7280; font-size: 0.9rem; }
         .chunk-selection-container { display: none; }
         .header-divider { border-bottom: 1px solid #e5e7eb; padding-bottom: 0.75rem; margin-bottom: 1rem; }
+        #page-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
+        }
+        #page-overlay.is-active { display: flex; }
+        .loading-indicator { text-align: center; color: #3273dc; font-weight: 600; }
+        .loading-spinner {
+            width: 2.5rem;
+            height: 2.5rem;
+            border: 3px solid rgba(50, 115, 220, 0.2);
+            border-top-color: #3273dc;
+            border-radius: 9999px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 0.75rem;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
+<div id="page-overlay" aria-live="polite" aria-busy="true">
+    <div class="loading-indicator">
+        <div class="loading-spinner" role="presentation"></div>
+        <div id="overlay-message">Wird geladen...</div>
+    </div>
+</div>
 <section class="section">
     <div class="container">
         <div class="level">
@@ -122,7 +151,7 @@
 
                         <div class="field is-grouped is-justify-content-space-between is-align-items-center">
                             <div class="control">
-                                <button class="button is-primary" type="submit">Suchen</button>
+                                <button class="button is-primary" type="submit" data-loading-label="Suche läuft...">Suchen</button>
                             </div>
                             <p class="help mb-0">Liefert Abschnitte für den nächsten Schritt.</p>
                         </div>
@@ -181,7 +210,7 @@
                         <div class="field is-grouped is-justify-content-flex-end">
                             <p class="help mr-auto">Mindestens einen Abschnitt auswählen.</p>
                             <div class="control">
-                                <button class="button is-link" type="submit">Antwort generieren</button>
+                                <button class="button is-link" type="submit" data-loading-label="Antwort wird generiert...">Antwort generieren</button>
                             </div>
                         </div>
                     </form>
@@ -198,6 +227,41 @@
     const lexicalWeight = document.getElementById('lexicalWeight');
     const lexicalWeightValue = document.getElementById('lexicalWeightValue');
 
+    const overlay = document.getElementById('page-overlay');
+    const overlayMessage = document.getElementById('overlay-message');
+
+    const showOverlay = (message) => {
+        if (!overlay) return;
+        if (overlayMessage) {
+            overlayMessage.textContent = message || 'Wird geladen...';
+        }
+        overlay.classList.add('is-active');
+    };
+
+    const hideOverlay = () => {
+        if (!overlay) return;
+        overlay.classList.remove('is-active');
+    };
+
+    const setButtonLoading = (button, isLoading) => {
+        if (!button) return;
+        const defaultLabel = button.dataset.defaultLabel || button.textContent;
+        if (!button.dataset.defaultLabel) {
+            button.dataset.defaultLabel = defaultLabel;
+        }
+        const loadingLabel = button.dataset.loadingLabel || defaultLabel;
+
+        if (isLoading) {
+            button.classList.add('is-loading');
+            button.disabled = true;
+            button.textContent = loadingLabel;
+        } else {
+            button.classList.remove('is-loading');
+            button.disabled = false;
+            button.textContent = button.dataset.defaultLabel;
+        }
+    };
+
     if (lexicalWeight && lexicalWeightValue) {
         const updateLexicalLabel = (value) => {
             lexicalWeightValue.textContent = Number(value).toFixed(2);
@@ -211,6 +275,53 @@
     }
 
     const searchResults = document.getElementById('search-results');
+    const searchForm = document.querySelector('form[hx-post="/search"]');
+    const taskForm = document.querySelector('form[hx-post="/task"]');
+
+    if (searchForm) {
+        const searchButton = searchForm.querySelector('button[type="submit"]');
+        const endSearch = () => {
+            hideOverlay();
+            setButtonLoading(searchButton, false);
+        };
+
+        searchForm.addEventListener('htmx:beforeRequest', () => {
+            showOverlay('Suche läuft...');
+            setButtonLoading(searchButton, true);
+        });
+
+        ['htmx:afterSwap', 'htmx:responseError', 'htmx:sendError', 'htmx:timeout']
+            .forEach((eventName) => {
+                searchForm.addEventListener(eventName, endSearch);
+            });
+    }
+
+    if (taskForm) {
+        const taskButton = taskForm.querySelector('button[type="submit"]');
+        const endTaskRequest = () => {
+            hideOverlay();
+            setButtonLoading(taskButton, false);
+        };
+
+        taskForm.addEventListener('htmx:beforeRequest', () => {
+            showOverlay('Antwort wird generiert...');
+            setButtonLoading(taskButton, true);
+        });
+
+        ['htmx:afterSwap', 'htmx:responseError', 'htmx:sendError', 'htmx:timeout']
+            .forEach((eventName) => {
+                taskForm.addEventListener(eventName, endTaskRequest);
+            });
+    }
+
+    document.body.addEventListener('htmx:sseOpen', () => {
+        showOverlay('Antwort wird generiert...');
+    });
+
+    ['htmx:sseClose', 'htmx:sseError'].forEach((eventName) => {
+        document.body.addEventListener(eventName, hideOverlay);
+    });
+
     if (searchResults) {
         const setChunkSelection = (scope, checked) => {
             scope.querySelectorAll('.chunk-selection').forEach((checkbox) => {

@@ -11,15 +11,21 @@
     <p class="has-text-grey">Keine Treffer gefunden.</p>
 @else
     @for(ch.so.arp.rag.chat.DocumentResult document : results)
+        @{ String filename = document.filename(); }
+        @{ String displayName = filename; }
+        @if(filename != null && filename.length() > 20)
+            @{ int prefixLength = 10; }
+            @{ int suffixLength = 7; }
+            @{ displayName = filename.substring(0, prefixLength) + "..." + filename.substring(filename.length() - suffixLength); }
+        @endif
         <div class="surface" data-document-card data-document-id="${document.documentId().toString()}">
             <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
                 <div>
                     <label class="checkbox">
                         <input type="checkbox" data-document-toggle aria-label="Dokument auswählen"
                                id="document-${document.documentId().toString()}">
-                        <strong>${document.title()}</strong>
+                        <strong title="${filename}">${displayName}</strong>
                     </label>
-                    <span class="is-size-7 has-text-grey">(${document.filename()})</span>
                 </div>
                 @if(document.bestHybridScore() != null)
                     <span class="tag is-light">Score ${String.format("%.2f", document.bestHybridScore())}</span>
