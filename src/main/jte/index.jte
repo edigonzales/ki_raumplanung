@@ -16,6 +16,8 @@
         .section-card summary { cursor: pointer; }
         .full-document-toggle { display: flex; justify-content: flex-start; margin: 0.5rem 0; }
         .full-document-toggle label { font-weight: 400; }
+        .task-controls { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; margin: 0.5rem 0; }
+        .task-select { display: flex; flex-direction: column; text-align: left; }
     </style>
 </head>
 <body>
@@ -78,11 +80,27 @@
         <form hx-post="/task" hx-target="#task-panel" hx-swap="innerHTML">
             <label for="prompt">Aufgabe (z.B. auch Combobox für Templates für Strukturierung, damit man das nicht immer wiederholen muss)</label><br>
             <textarea id="prompt" name="prompt" rows="4" cols="50" required>Fasse die ausgewählten Abschnitte zum Thema [THEMA] in [Gestaltungsplänen] zusammen.</textarea><br>
+            <div class="task-controls">
+                <div class="task-select">
+                    <label for="template">Templates</label>
+                    <select id="template" name="template" disabled>
+                    </select>
+                </div>
+            </div>
             <div class="full-document-toggle">
                 <label>
                     <input type="checkbox" id="useFullDocuments" name="useFullDocuments">
                     Gesamte Dokument(e) verwenden
                 </label>
+            </div>
+            <div class="task-controls">
+                <div class="task-select">
+                    <label for="model">Modell</label>
+                    <select id="model" name="model" disabled>
+                        <option value="gpt-4o-mini">gpt-4o-mini</option>
+                        <option value="gpt-5-mini">gpt-5-mini</option>
+                    </select>
+                </div>
             </div>
             <button type="submit">Antwort generieren</button>
         </form>
