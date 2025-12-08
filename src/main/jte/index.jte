@@ -22,7 +22,7 @@
         
         body,
         button, input, optgroup, select, textarea {
-            font-family: Frutiger, system-ui, Roboto, sans;
+            font-family: Frutiger, system-ui, Roboto, sans;txdfgdfgdfgdfgdfgdfgdfg
             color: #333333;
             font-size: 1rem;
         }
@@ -250,11 +250,138 @@ input[type="range"]::-ms-thumb {
     background-color: #dedede;
 }
     
+    
+       .task-container {
+          position: relative;
+          width: 80%; 
+          margin-right: 20px;
+        }     
+    
+.textarea-input {
+    width: 100%;
+    min-height: 120px;              /* adjustable – choose your preferred height */
+    background-color: #F4F4F4;
+    
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 1px solid #000;
+    border-left: 0;
+
+    padding: 12px;
+    box-sizing: border-box;
+
+    font-size: 16px;
+    font-family: Frutiger, system-ui, Roboto, sans;
+    color: #333;
+
+    resize: vertical;               /* allow resizing vertically, optional */
+    outline: none;
+}
+
+.textarea-input:focus {
+    border-bottom: 1px solid rgb(198, 40, 40);  /* red highlight */
+    outline: none;
+}    
+    
+/* Wrapper for checkbox + label text */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #333;
+}
+
+/* Hide native checkbox */
+.checkbox-group input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Custom box */
+.checkbox-custom {
+    width: 20px;
+    height: 20px;
+    box-sizing: border-box;
+    background-color: #F4F4F4;   /* same grey as inputs */
+    border: 2px solid #666;
+    border-radius: 3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* Checkmark */
+.checkbox-custom::after {
+    content: "";
+    width: 10px;
+    height: 6px;
+    border-left: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    transform: rotate(-45deg) scale(0);
+    transform-origin: center;
+    transition: transform 0.15s ease;
+}
+
+/* Checked state: red fill */
+.checkbox-group input[type="checkbox"]:checked + .checkbox-custom {
+    background-color: rgb(198, 40, 40);
+    border-color: rgb(198, 40, 40);
+}
+
+/* Show checkmark when checked */
+.checkbox-group input[type="checkbox"]:checked + .checkbox-custom::after {
+    transform: rotate(-45deg) scale(1);
+}
+
+/* Focus outline for accessibility */
+.checkbox-group input[type="checkbox"]:focus + .checkbox-custom {
+    outline: 1px solid rgb(198, 40, 40);
+    outline-offset: 2px;
+}
+
+/* Generic disabled state */
+input:disabled,
+select:disabled,
+textarea:disabled,
+button:disabled {
+    color: #9e9e9e;          /* greyed-out text */
+    background-color: #F4F4F4;
+    border-color: #cccccc;   /* optional: soften the bottom border */
+    cursor: not-allowed;
+}
+
+/* If you want to target only your styled controls: */
+.search-input:disabled,
+.select-input:disabled,
+.textarea-input:disabled,
+.btn-input:disabled {
+    color: #9e9e9e;
+    background-color: #F4F4F4;
+    border-bottom-color: #cccccc;
+}
+
+/* Checkbox label text when disabled */
+.checkbox-group input[type="checkbox"]:disabled ~ span {
+    color: #9e9e9e;
+    cursor: not-allowed;
+}
+
+/* Optional: dim the custom checkbox box itself */
+.checkbox-group input[type="checkbox"]:disabled + .checkbox-custom {
+    border-color: #cccccc;
+    background-color: #f0f0f0;
+}
+    
+    
         .result-card { border: 1px solid #000; padding: 0.5rem; margin-bottom: 0.5rem; }
         .document-header { display: flex; justify-content: space-between; gap: 0.5rem; align-items: flex-start; }
         .section-card { border: 1px solid #ddd; padding: 0.5rem; margin-top: 0.5rem; background: #fafafa; }
         .section-card details { margin-top: 0.25rem; }
-        .section-card summary { cursor: pointer; }
+        .section-card summary { cursor: pointer; } Stefan Ziegelr
         .full-document-toggle { display: flex; justify-content: flex-start; margin: 0.5rem 0; }
         .full-document-toggle label { font-weight: 400; }
         .task-controls { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; margin: 0.5rem 0; }
@@ -270,7 +397,7 @@ input[type="range"]::-ms-thumb {
 <h1 style="margin-top: 0px;">KI Raumplanung</h1>
 <div class="layout">
     <div class="column">
-        <h2>Schritt 1: Suche</h2>
+        <h2>Schritt 1: Dokumente suchen</h2>
         <form hx-post="/search" hx-target="#search-results" hx-swap="innerHTML">
         
             <div class="input-container">
@@ -286,9 +413,8 @@ input[type="range"]::-ms-thumb {
                             placeholder="Stichworte" autofocus required/>
                             <span class="clear-icon" hx-on:click="document.querySelector('#keywords').value = ''; htmx.trigger('#keywords', 'input');"><i class="bi bi-x" style="color: #333; font-size:1.2rem;"></i></span>
                     </div>
-                </div>        
-            
-            
+                </div>
+
                 <div class="form-group">            
                     <label for="gemeinde" class="form-label">Gemeinde</label>
                     <select id="gemeinde" class="select-input" name="municipality">
@@ -349,31 +475,38 @@ input[type="range"]::-ms-thumb {
     <div class="column">
         <h2>Schritt 2: Aufgabe stellen</h2>
         <form hx-post="/task" hx-target="#task-panel" hx-swap="innerHTML"> 
-            <label for="prompt">Aufgabe</label><br>
-            <textarea id="prompt" name="prompt" rows="4" cols="50" required>Fasse die ausgewählten Abschnitte zum Thema [Hecken in Gestaltungsplänen] zusammen.</textarea><br>
-            <div class="task-controls">
-                <div class="task-select">
-                    <label for="template">Templates</label>
-                    <select id="template" name="template" disabled>
+        
+            <div class="task-container">
+                <div class="form-group">                        
+                    <label for="prompt" class="form-label">Aufgabe</label>
+                    <textarea id="prompt" class="textarea-input" name="prompt" rows="4" cols="50" required>Fasse die ausgewählten Abschnitte zum Thema [Hecken in Gestaltungsplänen] zusammen.</textarea><br>
+                </div>
+                
+                <div class="form-group">                        
+                    <label for="template" class="form-label">Templates</label>
+                    <select id="template" class="select-input" name="template" disabled>
                     </select>
                 </div>
-            </div>
-            <div class="full-document-toggle">
-                <label>
-                    <input type="checkbox" id="useFullDocuments" name="useFullDocuments">
-                    Gesamte Dokument(e) verwenden
-                </label>
-            </div>
-            <div class="task-controls">
-                <div class="task-select">
-                    <label for="model">Modell</label>
-                    <select id="model" name="model" disabled>
+                
+                <div class="form-group">
+                    <label class="checkbox-group">
+                        <input type="checkbox" id="useFullDocuments" name="useFullDocuments"/>
+                        <span class="checkbox-custom"></span>
+                        <span>Gesamte Dokument(e) verwenden</span>
+                    </label>                
+                </div>
+                
+                <div class="form-group">                        
+                    <label for="model" class="form-label">Modell</label>
+                    <select id="model"  class="select-input" name="model" disabled>
                         <option value="gpt-4o-mini">gpt-4o-mini</option>
                         <option value="gpt-5-mini">gpt-5-mini</option>
-                    </select>
-                </div>
+                    </select>                    
+                </div>                
             </div>
-            <button type="submit">Antwort generieren</button>
+                    
+            <button type="submit" class="btn-input">Antwort generieren</button>
+            
         </form>
         <div id="task-panel">
             <p>Wähle zunächst Abschnitte aus der Suche.</p>
