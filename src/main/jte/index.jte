@@ -635,8 +635,59 @@ button:disabled {
             }
         });
 
+        const toggleSubmitDuringRequest = (form, handleAfterRequest) => {
+            const submitButton = form ? form.querySelector('button[type="submit"]') : null;
+            if (!form || !submitButton) {
+                return;
+            }
+
+            const setDisabled = (disabled) => {
+                submitButton.disabled = disabled;
+            };
+
+            form.addEventListener('htmx:beforeRequest', () => setDisabled(true));
+            form.addEventListener('htmx:afterRequest', (event) => {
+                if (typeof handleAfterRequest === 'function') {
+                    handleAfterRequest(event, setDisabled);
+                } else {
+                    setDisabled(false);
+                }
+            });
+            form.addEventListener('htmx:responseError', () => setDisabled(false));
+            form.addEventListener('htmx:sendError', () => setDisabled(false));
+        };
+
+        const searchForm = document.querySelector('form[hx-post="/search"]');
+        toggleSubmitDuringRequest(searchForm);
+
         const taskForm = document.querySelector('form[hx-post="/task"]');
         if (taskForm) {
+            toggleSubmitDuringRequest(taskForm, (_event, setDisabled) => {
+                const taskPanel = document.getElementById('task-panel');
+                if (!taskPanel) {
+                    setDisabled(false);
+                    return;
+                }
+
+                const sseContainer = taskPanel.querySelector('[hx-ext~="sse"]');
+                if (!sseContainer) {
+                    setDisabled(false);
+                    return;
+                }
+
+                const enableButton = () => {
+                    setDisabled(false);
+                };
+
+                const handleStreamFinished = () => {
+                    sseContainer.removeEventListener('htmx:sseClose', handleStreamFinished);
+                    sseContainer.removeEventListener('htmx:sseError', handleStreamFinished);
+                    enableButton();
+                };
+
+                sseContainer.addEventListener('htmx:sseClose', handleStreamFinished);
+                sseContainer.addEventListener('htmx:sseError', handleStreamFinished);
+            });
             taskForm.addEventListener('htmx:configRequest', (event) => {
                 const sectionToggles = Array.from(searchResults.querySelectorAll('[data-section-toggle]:checked'));
 
