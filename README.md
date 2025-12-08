@@ -1,5 +1,11 @@
 # ki_raumplanung
 
+## todo
+
+- Query anpassen für mehrere Worte. Was will man dann?
+
+
+## db dump
 ```
 OPENAI_API_KEY=sk-proj-... jbang ingest_data.java  data/VP_Berichte
 ```
@@ -18,7 +24,7 @@ exit
 docker compose cp pgvector:/tmp/rag_inserts.sql ./rag_inserts.sql
 ```
 
-## Chat architecture
+## ~~Chat architecture~~
 
 ```mermaid
 sequenceDiagram

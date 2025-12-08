@@ -75,6 +75,7 @@ public class ChatPageController {
                 .queryParam("documentIds", effectiveDocumentIds)
                 .queryParam("contextToken", contextToken)
                 .build()
+                .encode()
                 .toUriString();
 
         model.addAttribute("streamUrl", streamUrl);
