@@ -2,7 +2,9 @@
 
 ## todo
 
-- Query anpassen für mehrere Worte. Was will man dann?
+- Query anpassen für mehrere Worte. Was will man dann? -> ggf. nicht eine gemeinsame Query sondern 2?
+- Link zu Dokument
+- Highlighting lexikalische Suche
 
 
 ## db dump
