@@ -377,9 +377,9 @@ button:disabled {
 }
     
     
-        .result-card { border: 1px solid #000; padding: 0.5rem; margin-bottom: 0.5rem; }
+        .result-card { border-bottom: 1px solid rgb(221, 221, 221); padding: 1.5rem; margin-bottom: 0.rem; }
         .document-header { display: flex; justify-content: space-between; gap: 0.5rem; align-items: flex-start; }
-        .section-card { border: 1px solid #ddd; padding: 0.5rem; margin-top: 0.5rem; background: #fafafa; }
+        .section-card { border: 0px solid #ddd; padding: 0.5rem; margin-top: 0.5rem; background: #F4F4F4; }
         .section-card details { margin-top: 0.25rem; }
         .section-card summary { cursor: pointer; } Stefan Ziegelr
         .full-document-toggle { display: flex; justify-content: flex-start; margin: 0.5rem 0; }

@@ -3,15 +3,16 @@
 @if(results.isEmpty()) 
     <p>Keine Treffer gefunden.</p>
 @else 
-    <button type="button" data-select-all data-label-select="Alle Abschnitte auswählen"
+    <button type="button" class="btn-input" data-select-all data-label-select="Alle Abschnitte auswählen"
             data-label-deselect="Alle Abschnitte abwählen" aria-pressed="false">Alle Abschnitte auswählen</button>
+    
     @for(ch.so.arp.rag.chat.DocumentResult document : results)
         <div class="result-card" data-document-card data-document-id="${document.documentId().toString()}">
             <div class="document-header">
                 <label>
                     <input type="checkbox" data-document-toggle aria-label="Dokument auswählen"
                            id="document-${document.documentId().toString()}">
-                    <strong>${document.title()}</strong> (${document.filename()})
+                    <strong>${document.filename()}</strong> (${document.filename()})
                 </label>
                 <div class="document-meta">
                     @if(document.bestHybridScore() != null)
