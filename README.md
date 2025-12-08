@@ -5,6 +5,8 @@
 - Query anpassen für mehrere Worte. Was will man dann? -> ggf. nicht eine gemeinsame Query sondern 2?
 - Link zu Dokument
 - Highlighting lexikalische Suche
+- Templates: Ggf. wichtig oder aber man muss einfach schlaue Prompts bei der Aufgabe stellen.
+- Modell
 
 
 ## db dump
