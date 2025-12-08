@@ -12,6 +12,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +54,30 @@ class TaskFlowTests {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("sse-connect")))
                 .andExpect(content().string(not(containsString("Bitte wähle mindestens einen Abschnitt"))));
+    }
+
+    @Test
+    void taskPanelEncodesPromptInStreamUrl() throws Exception {
+        String prompt = "Fasse die ausgewählten Abschnitte zum Thema [Hecken in Gestaltungsplänen] zusammen.";
+
+        MvcResult result = mockMvc.perform(post("/task")
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("prompt", prompt)
+                        .param("sectionIds", "1")
+                        .param("useFullDocuments", "true"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String body = result.getResponse().getContentAsString();
+
+        Matcher matcher = Pattern.compile("sse-connect=\\\"([^\\\"]+)\\\"").matcher(body);
+        assertThat(matcher.find()).isTrue();
+
+        String streamUrl = matcher.group(1);
+        assertThat(streamUrl)
+                .contains(
+                        "prompt=Fasse%20die%20ausgew%C3%A4hlten%20Abschnitte%20zum%20Thema%20%5BHecken%20in%20Gestaltungspl%C3%A4nen%5D%20zusammen.")
+                .doesNotContain(prompt);
     }
 
     @Test
