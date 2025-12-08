@@ -5,12 +5,12 @@
     <p>Bitte wähle mindestens einen Abschnitt aus.</p>
 @else
     <div hx-ext="sse" sse-connect="${streamUrl}" sse-close="close">
-        <p>Aufgabe: ${prompt}</p>
-        <p>Kontext: ${selection.size()} ${selection.stream().allMatch(selected -> selected.sectionId() == null) ? "Dokumente" : "Abschnitte"}</p>
+        <p><b>Aufgabe:</b> &laquo;${prompt}&raquo;</p>
+        <p><b>Kontext:</b> ${selection.size()} ${selection.stream().allMatch(selected -> selected.sectionId() == null) ? "Dokumente" : "Abschnitte"}</p>
         <ul>
             @for(ch.so.arp.rag.chat.SectionSelection selected : selection)
                 <li>
-                    ${selected.title()} –
+                    ${selected.filename()} –
                     ${selected.sectionPath() != null ? selected.sectionPath() : "Ganzes Dokument"}
                 </li>
             @endfor

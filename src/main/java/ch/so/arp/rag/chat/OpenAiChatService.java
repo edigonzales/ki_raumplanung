@@ -43,7 +43,7 @@ public class OpenAiChatService implements ChatService {
         try {
             String prompt = buildPrompt(request);
             String content = chatClient.prompt().system(promptFactory.buildSystemPromptWithoutUserQuestion(prompt)).user(request.prompt()).call().content();
-            String rendered = markdownRenderer.render(content);
+            String rendered = markdownRenderer.render("<b>Anwort:</b><br/>"+content);
             emitter.send(SseEmitter.event().name("message").data(rendered));
             emitter.send(SseEmitter.event().name("close").data("close"));
             LOGGER.info("SSE close event sent.");
