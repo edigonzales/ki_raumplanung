@@ -27,15 +27,21 @@
             font-size: 1rem;
         }
         
-        .layout { 
+        .layout {
             padding-left: 1rem;
-            display: flex; 
-            gap: 2rem; 
-            align-items: 
-            flex-start; 
+            display: flex;
+            gap: 2rem;
+            align-items:
+            flex-start;
+            width: 100%;
+            box-sizing: border-box;
         }
-        
-        .column { flex: 1; }
+
+        .column {
+            flex: 0 0 50%;
+            max-width: 50%;
+            min-width: 0;
+        }
      
        .input-container {
           position: relative;
