@@ -3,6 +3,7 @@
 ## todo
 
 - Query anpassen für mehrere Worte. Was will man dann? -> ggf. nicht eine gemeinsame Query sondern 2?
+- Filter "Planungsinstrumen" wird nicht berücksichtigt.
 - Ganzer Abschnitt (nicht nur Chunk oder aggregierte Chunks) im GUI
 - Link zu Dokument (und andere Metadaten zu Dokument)
 - Highlighting lexikalische Suche
