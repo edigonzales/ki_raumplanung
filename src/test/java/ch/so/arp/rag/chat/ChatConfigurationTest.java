@@ -1,68 +1,41 @@
 package ch.so.arp.rag.chat;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
-import javax.sql.DataSource;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.mock.env.MockEnvironment;
 
 class ChatConfigurationTest {
 
-    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withUserConfiguration(ChatConfiguration.class, InfrastructureConfiguration.class);
+    private final ChatConfiguration configuration = new ChatConfiguration();
 
     @Test
-    void usesMocksByDefault() {
-        contextRunner.run(context -> {
-            assertThat(context).hasSingleBean(LlmClient.class);
-            assertThat(context).getBean(LlmClient.class).isInstanceOf(MockLlmClient.class);
-            assertThat(context).hasSingleBean(VectorDatabase.class);
-            assertThat(context).getBean(VectorDatabase.class).isInstanceOf(MockVectorDatabase.class);
-        });
+    void usesBuilderWhenChatClientBeanMissing() {
+        MockEnvironment environment = new MockEnvironment();
+        environment.setProperty("spring.ai.openai.api-key", "test-key");
+
+        ObjectProvider<ChatClient> emptyClientProvider = emptyProvider();
+        ChatClient.Builder builder = mock(ChatClient.Builder.class);
+        ChatClient builtClient = mock(ChatClient.class);
+        when(builder.build()).thenReturn(builtClient);
+        @SuppressWarnings("unchecked")
+        ObjectProvider<ChatClient.Builder> builderProvider = mock(ObjectProvider.class);
+        when(builderProvider.getIfAvailable()).thenReturn(builder);
+
+        ChatService chatService = configuration.chatService(environment, emptyClientProvider, builderProvider,
+                mock(DocumentSearchService.class), new PromptFactory(), new TaskContextStore(), new MarkdownRenderer());
+
+        assertThat(chatService).isInstanceOf(OpenAiChatService.class);
     }
 
-    @Test
-    void createsRealBeansWhenMocksDisabled() {
-        contextRunner
-                .withPropertyValues(
-                        "rag.chat.mock-openai=false",
-                        "rag.chat.mock-vector-store=false",
-                        "spring.ai.openai.api-key=test-key",
-                        "rag.chat.openai.base-url=https://example.com/v1",
-                        "rag.chat.openai.model=gpt-4o")
-                .run(context -> {
-                    assertThat(context).hasSingleBean(LlmClient.class);
-                    assertThat(context).getBean(LlmClient.class).isInstanceOf(OpenAiLlmClient.class);
-                    OpenAiClientProperties properties = context.getBean(OpenAiClientProperties.class);
-                    assertThat(properties.getApiKey()).isEqualTo("test-key");
-                    assertThat(properties.getModel()).isEqualTo("gpt-4o");
-
-                    assertThat(context).hasSingleBean(VectorDatabase.class);
-                    assertThat(context).getBean(VectorDatabase.class).isInstanceOf(PostgresVectorDatabase.class);
-                });
-    }
-
-    @Configuration(proxyBeanMethods = false)
-    static class InfrastructureConfiguration {
-
-        @Bean
-        NamedParameterJdbcTemplate namedParameterJdbcTemplate(DataSource dataSource) {
-            return new NamedParameterJdbcTemplate(dataSource);
-        }
-
-        @Bean
-        DataSource dataSource() {
-            DriverManagerDataSource dataSource = new DriverManagerDataSource();
-            dataSource.setDriverClassName("org.h2.Driver");
-            dataSource.setUrl("jdbc:h2:mem:test;MODE=PostgreSQL");
-            dataSource.setUsername("sa");
-            dataSource.setPassword("");
-            return dataSource;
-        }
+    private <T> ObjectProvider<T> emptyProvider() {
+        @SuppressWarnings("unchecked")
+        ObjectProvider<T> provider = mock(ObjectProvider.class);
+        when(provider.getIfAvailable()).thenReturn(null);
+        return provider;
     }
 }

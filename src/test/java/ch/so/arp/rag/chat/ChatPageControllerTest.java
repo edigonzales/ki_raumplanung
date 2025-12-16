@@ -3,13 +3,17 @@ package ch.so.arp.rag.chat;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.ui.ExtendedModelMap;
 
 class ChatPageControllerTest {
 
-    private final ChatPageController controller = new ChatPageController();
+    private final ChatPageController controller =
+            new ChatPageController(new MockHybridSearchService(), new TaskContextStore());
 
     @Test
     void shouldReturnIndexView() {
-        assertThat(controller.index()).isEqualTo("index");
+        ExtendedModelMap model = new ExtendedModelMap();
+        assertThat(controller.index(model)).isEqualTo("index");
+        assertThat(model.get("results")).isNotNull();
     }
 }

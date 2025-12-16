@@ -1,8 +1,8 @@
 from pathlib import Path
 from docling.document_converter import DocumentConverter
 
-INPUT_DIR = Path("./data/VP_OP/")
-OUTPUT_DIR = Path("/Users/stefan/tmp/out_markdown")
+INPUT_DIR = Path("./data/VP_Berichte/")
+OUTPUT_DIR = Path("/Users/stefan/tmp/out_markdown_gp")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 converter = DocumentConverter()
