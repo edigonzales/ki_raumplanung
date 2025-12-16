@@ -1,0 +1,74 @@
+= KI Raumplanung
+:revealjsdir: reveal.js
+:revealjs_hash: true
+:revealjs_slideNumber: true
+:docinfo: shared
+:icons: font
+:customcss: my-overrides.css
+
+== Ausgangslage
+
+image::images/ausgangslage02.png[]
+
+== Ausgangslage
+
+image::images/ausgangslage01.png[]
+
+== Ziele
+
+* Textbausteine zu einem Thema, z.B. &laquo;Hecken&raquo; oder &laquo;Biber&raquo;, erstellen lassen.
+* Wissensmanagement allgemein
+
+== Lösungsidee: RAG
+
+Retrieval-Augmented Generation =  _&laquo;Generieren [z.B. von Text] ergänzt durch Abrufen [von Informationen]&raquo;_
+
+[.columns.is-vcentered]
+== Technologie-Stack
+
+[.column]
+--
+image::images/postgresql.svg[]
+
+PostgreSQL
+--
+[.column]
+--
+image::images/spring_boot.svg[]
+
+Spring Boot / Spring AI
+--
+[.column]
+--
+image::images/openai.svg[] 
+
+OpenAI
+--
+
+== Resultat
+
+image::images/resultat01.png[]
+
+== Lessons learned
+
+=== Metadaten
+
+Metadaten verwenden! Können ggf. (auch mit KI) wiederhergestellt werden.
+
+image::images/metadaten01.png[]
+
+=== Datenformate
+
+icon:smile-o[] Markdown/Asciidoc etc.
+
+icon:meh-o[] DOCX
+
+icon:frown-o[] PDF  
+
+=== Kapitelweise Chunking-Strategie
+
+image::images/chunks_chapters01.png[]
+
+===  2-Schritt-Verfahren
+
+_&laquo;Retrieve with chunks, generate with documents: Find relevant documents via chunks but chat with whole documents.&raquo;_
