@@ -72,3 +72,7 @@ image::images/chunks_chapters01.png[]
 ===  2-Schritt-Verfahren
 
 _&laquo;Retrieve with chunks, generate with documents: Find relevant documents via chunks but chat with whole documents.&raquo;_
+
+== Coming Next
+
+image::images/coming_next.png[]
